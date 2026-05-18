@@ -32,6 +32,9 @@ python -m venv .venv (First-Time Only)
 .venv\Scripts\activate or source .venv/bin/activate
 pip install -r requirements.txt
 
+Run run the backend server
+uvicorn src.main:app --reload
+
 Run when you install new Python packages, so dependencies are consistent
 pip freeze > requirements.txt
 ```

@@ -1,12 +1,8 @@
 # Ignore any missing import warnings in the backend for now
 # The backend runs perfectly, it's just a local VS Code path quirk because our code lives in the /backend
-import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import psycopg
-from dotenv import load_dotenv
-
-load_dotenv()
+from src.database import get_db
 
 app = FastAPI(title="Dungeon Crawler RPG API")
 
@@ -19,13 +15,6 @@ app.add_middleware(
 )
 
 
-def get_db_connection():
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        raise ValueError("DATABASE_URL is missing from your .env file!")
-    return psycopg.connect(url)
-
-
 @app.get("/")
 def root():
     return {"message": "Dungeon Crawler Backend is Running!"}
@@ -33,19 +22,40 @@ def root():
 
 @app.get("/api/game-status")
 def get_game_status():
-    """Example endpoint pulling live data from your Neon database"""
+    """Verifies connection and pulls the complete list of active RPG tables"""
     try:
-        with get_db_connection() as conn:
+        with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT NOW();")
-                db_time = cur.fetchone()
+                db_time = cur.fetchone()[0]
+
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                    AND table_type = 'BASE TABLE'
+                    ORDER BY table_name ASC;
+                """)
+
+                all_tables = [row[0] for row in cur.fetchall()]
+
+                is_schema_populated = len(all_tables) > 0
 
                 return {
                     "status": "healthy",
                     "database": "Connected to Neon successfully!",
-                    "server_time": db_time[0],
+                    "database_name": "rpg_game",
+                    "server_time": db_time,
+                    "total_tables_count": len(all_tables),
+                    "verified_tables_found": all_tables,
+                    "schema_ready": is_schema_populated,
+                    "message": (
+                        "🔥 Ready to build! Connection live and all tables verified."
+                        if is_schema_populated
+                        else "Connected, but no tables found."
+                    ),
                 }
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Database connection failed: {str(e)}"
+            status_code=500, detail=f"Database verification failed: {str(e)}"
         )
