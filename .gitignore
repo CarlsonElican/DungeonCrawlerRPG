@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Frontend Build & Dependencies
 node_modules
 dist
 dist-ssr
@@ -17,8 +18,20 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
+csuo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Backend Python / Virtual Environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment Variables (Crucial for security!)
+# .env
+# .env.local

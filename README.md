@@ -9,10 +9,18 @@ Can prob use some of the icons and symbols for our game like swords and health, 
 
 Frontend
 
+cd frontend
 npm install
 npm run dev
 
 Backend
 
-npm install
-npm run dev
+cd backend
+python -m venv .venv
+Bash Shell
+source .venv/Scripts/activate
+CMD/Powershell
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+uvicorn src.main:app --reload
