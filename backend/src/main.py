@@ -1,4 +1,4 @@
-# Ignore any missing import warnings in in the editor for now
+# Ignore any missing import warnings in the backend for now
 # The backend runs perfectly, it's just a local VS Code path quirk because our code lives in the /backend
 import os
 from fastapi import FastAPI, HTTPException
