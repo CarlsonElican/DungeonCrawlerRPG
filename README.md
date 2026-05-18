@@ -1,26 +1,38 @@
 # DungeonCrawlerRPG
-In-Progress Web based Dungeon Crawler
 
+An in-progress web-based dungeon crawler RPG.
 
-I installed lucide-react -  open-source icon library that provides 1600+ vector (svg) files for displaying icons and symbols in digital and non-digital projects. 
-Can prob use some of the icons and symbols for our game like swords and health, etc or we can just do it without icons. 
+## Notes
 
+We installed `lucide-react`, an open-source icon library that provides 1600+ SVG icons for digital projects.
 
+Possible uses for the game include:
+- Swords and weapons
+- Health and hearts
+- Inventory icons
+- UI buttons and status indicators
 
-Frontend
+We can either use these icons throughout the project or keep the UI minimal without them.
 
+---
+
+# Frontend
+
+```
 cd frontend
 npm install
 npm run dev
+```
 
-Backend
+# Backend
 
+```
 cd backend
-python -m venv .venv
-Bash Shell
-source .venv/Scripts/activate
-CMD/Powershell
-.venv\Scripts\activate
+python -m venv .venv (First-Time Only)
+.venv\Scripts\activate or source .venv/bin/activate
 pip install -r requirements.txt
 
-uvicorn src.main:app --reload
+Run when you install new Python packages, so dependencies are consistent
+pip freeze > requirements.txt
+```
+
