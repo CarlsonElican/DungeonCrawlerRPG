@@ -174,4 +174,3 @@ CREATE TABLE run_events (
     sequence_number INT,
     occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
