@@ -30,7 +30,7 @@ INSERT INTO item_templates (
 
 ('Leather Greaves', 'Basic leg guards made from boiled leather.', 'Leggings', 25, 0, 6, 1, 0.00, 0.00, 0.02, 0.00, 45),
 
-('Steelplated Legguards', 'Reinforced steel tassets that offer great protection at the cost of mobility.', 'Leggings', 65, 0, 22, -3, 0.00, 0.00, 0.00, 0.00, 150);
+('Steelplated Legguards', 'Reinforced steel tassets that offer great protection at the cost of mobility.', 'Leggings', 65, 0, 22, -3, 0.00, 0.00, 0.00, 0.00, 150),
 
 ('Heavy Iron Sabatons', 'Thick, clunky iron boots that make running difficult but stomping easy.', 'Boots', 40, 0, 15, -2, 0.00, 0.00, 0.00, 0.00, 70),
 
