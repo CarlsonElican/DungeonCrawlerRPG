@@ -9,5 +9,5 @@ INSERT INTO game_runs (
     max_gold_earned
 )
 VALUES
-    (1, 1, 1, 4, 3, 5, FALSE, 35),
-    (2, 1, 1, 2, 1, 5, FALSE, 50);
+    (3, 1, 1, 4, 3, 5, FALSE, 35),
+    (4, 1, 1, 2, 1, 5, FALSE, 50);
