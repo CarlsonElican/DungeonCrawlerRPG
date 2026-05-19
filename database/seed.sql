@@ -1,4 +1,4 @@
--- Simulated seed data for DungeonCrawlerRPG.
+-- Simulated seed data for the Dungeon Crawler RPG game.
 
 INSERT INTO users (username, email, password_hash, last_login_at)
 VALUES

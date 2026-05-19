@@ -106,7 +106,7 @@ WHERE run_id = 1
   AND ended_at IS NULL
   AND events_completed >= events_required;
 
--- View the full event history for a run.
+-- View the full event history for a single run.
 SELECT
     re.run_event_id,
     re.run_id,
@@ -129,7 +129,7 @@ JOIN event_results AS er
 WHERE re.run_id = 1
 ORDER BY re.sequence_number;
 
--- Update a character's highest floor reached from the active run.
+-- Updates a character's highest floor reached from the active run.
 UPDATE characters
 SET highest_floor_reached = GREATEST(highest_floor_reached, (
         SELECT current_floor
