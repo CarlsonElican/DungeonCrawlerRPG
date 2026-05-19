@@ -38,4 +38,3 @@ uvicorn src.main:app --reload
 Run when you install new Python packages, so dependencies are consistent
 pip freeze > requirements.txt
 ```
-
