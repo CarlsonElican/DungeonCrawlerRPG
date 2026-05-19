@@ -27,35 +27,6 @@ VALUES
     (1, 'Arden', 1, 0, 100, 120, 35, 120, 14, 8, 10, 5.00, 1.50, 3.00, 0.00, 'Power Strike'),
     (2, 'Lyra', 1, 25, 100, 90, 50, 90, 18, 5, 14, 8.00, 1.60, 6.00, 0.00, 'Arcane Bolt');
 
-INSERT INTO rarity (rarity_name, stat_multiplier, sell_price_multiplier, weight, hex_color)
-VALUES
-    ('Common', 1.00, 1.00, 60.00, '#FFFFFF'),
-    ('Uncommon', 1.15, 1.25, 25.00, '#1EFF00'),
-    ('Rare', 1.35, 1.75, 10.00, '#0070DD'),
-    ('Epic', 1.65, 2.50, 4.00, '#A335EE'),
-    ('Legendary', 2.00, 4.00, 1.00, '#FF8000');
-
-INSERT INTO item_templates (
-    name,
-    description,
-    item_type,
-    base_hp,
-    base_atk,
-    base_def,
-    base_spd,
-    base_crit_rate,
-    base_crit_dmg,
-    base_eva,
-    base_lifesteal,
-    sell_amount
-)
-VALUES
-    ('Iron Sword', 'A basic sword used by new adventurers.', 'Weapon', 0, 6, 0, 0, 1.00, 0.00, 0.00, 0.00, 12),
-    ('Leather Armor', 'Light armor that offers basic protection.', 'Armor', 15, 0, 4, 0, 0.00, 0.00, 1.00, 0.00, 10),
-    ('Swift Boots', 'Boots that help the wearer move faster.', 'Boots', 0, 0, 1, 4, 0.00, 0.00, 2.00, 0.00, 9),
-    ('Vampiric Ring', 'A ring that restores a small amount of health after attacks.', 'Accessory', 0, 2, 0, 0, 0.00, 0.00, 0.00, 2.00, 20),
-    ('Health Potion', 'Restores health when used.', 'Consumable', 25, 0, 0, 0, 0.00, 0.00, 0.00, 0.00, 5);
-
 INSERT INTO inventory_items (
     character_id,
     item_template_id,
@@ -82,36 +53,6 @@ VALUES
     (1, 2, 'Armor'),
     (2, 4, 'Accessory'),
     (2, 5, 'Ring');
-
-INSERT INTO enemies (
-    name,
-    type,
-    level,
-    base_hp,
-    base_atk,
-    base_def,
-    base_spd,
-    base_crit_rate,
-    base_crit_dmg,
-    base_eva,
-    base_lifesteal,
-    base_expdrop,
-    base_golddrop
-)
-VALUES
-    ('Cave Slime', 'Slime', 1, 35, 5, 2, 3, 1.00, 1.25, 0.00, 0.00, 12, 8),
-    ('Skeleton Guard', 'Undead', 2, 55, 9, 5, 5, 3.00, 1.40, 2.00, 0.00, 22, 14),
-    ('Goblin Cutthroat', 'Humanoid', 3, 70, 12, 4, 9, 6.00, 1.50, 5.00, 0.00, 32, 20),
-    ('Crypt Warden', 'Boss', 5, 180, 22, 12, 7, 8.00, 1.75, 3.00, 1.00, 100, 75);
-
-INSERT INTO loot_table (enemy_id, item_template_id, weight)
-VALUES
-    (1, 5, 50.00),
-    (1, 1, 15.00),
-    (2, 2, 25.00),
-    (2, 5, 35.00),
-    (3, 3, 20.00),
-    (4, 4, 10.00);
 
 INSERT INTO shop_offer (item_template_id, rarity_id, day_number, price)
 VALUES
@@ -164,3 +105,117 @@ VALUES
     (1, 2, 2, 1, 2, 2),
     (1, 3, 3, 1, 3, 3),
     (2, 5, 2, 1, 1, 1);
+
+INSERT INTO rarity (rarity_id, rarity_name, stat_multiplier, sell_price_multiplier, weight, hex_color) VALUES
+(1, 'Common', 1.00, 1.00, 60.00, '#FFFFFF'),
+(2, 'Uncommon', 1.25, 1.10, 25.00, '#32CD32'),
+(3, 'Rare', 1.50, 1.25, 10.00, '#0000FF'),
+(4, 'Epic', 2.00, 1.50, 4.00, '#7F00FF'),
+(5, 'Legendary', 2.50, 2.00, 1.00, '#FF0000');
+
+
+INSERT INTO loot_table (enemy_id, item_template_id, weight)
+VALUES
+    -- Frail Skeleton (ID 1) Drops
+    (1, 1, 70.00), -- Frail Skeleton -> Rusty Sword
+    (1, 5, 40.00), -- Frail Skeleton -> Battered Wooden Shield
+    (1, 8, 30.00), -- Frail Skeleton -> Ragged Hood
+
+    -- Goblin Thief (ID 2) Drops
+    (2, 3, 50.00), -- Goblin Thief -> Assassin's Dagger
+    (2, 10, 50.00), -- Goblin Thief -> Tattered Cloth Garb
+    (2, 17, 10.00), -- Goblin Thief -> Gold Ring of Greed
+
+    -- Vampiric Bat (ID 3) Drops
+    (3, 8, 60.00), -- Vampiric Bat -> Ragged Hood
+    (3, 18, 15.00), -- Vampiric Bat -> Vampire's Amulet
+
+    -- Slime Blob (ID 4) Drops
+    (4, 1, 60.00), -- Slime Blob -> Rusty Sword
+    (4, 5, 50.00), -- Slime Blob -> Battered Wooden Shield
+
+    -- Dungeon Rat (ID 5) Drops
+    (5, 8, 50.00), -- Dungeon Rat -> Ragged Hood
+    (5, 10, 50.00), -- Dungeon Rat -> Tattered Cloth Garb
+
+    -- Zombie Wanderer (ID 6) Drops
+    (6, 1, 40.00), -- Zombie Wanderer -> Rusty Sword
+    (6, 13, 40.00), -- Zombie Wanderer -> Leather Greaves
+
+    -- Orc Berserker (ID 7) Drops
+    (7, 2, 60.00), -- Orc Berserker -> Slayer's Greatsword
+    (7, 13, 40.00), -- Orc Berserker -> Leather Greaves
+
+    -- Stone Golem (ID 8) Drops
+    (8, 6, 50.00), -- Stone Golem -> Tower Shield
+    (8, 9, 45.00), -- Stone Golem -> Knight's Helm
+    (8, 14, 25.00), -- Stone Golem -> Steelplated Legguards
+
+    -- Dark Sorcerer (ID 9) Drops
+    (9, 4, 50.00), -- Dark Sorcerer -> Cursed Bloodpike
+    (9, 12, 40.00), -- Dark Sorcerer -> Shadow Rogue Leather
+    (9, 16, 30.00), -- Dark Sorcerer -> Swift-Step Boots
+
+    -- Malakor the Desolate Dragon [Boss] (ID 10) Drops
+    (10, 2, 50.00), -- Malakor the Desolate Dragon -> Slayer's Greatsword
+    (10, 11, 40.00), -- Malakor the Desolate Dragon -> Steel Breastplate
+    (10, 14, 40.00), -- Malakor the Desolate Dragon -> Steelplated Legguards
+    (10, 18, 30.00); -- Malakor the Desolate Dragon -> Vampire's Amulet
+
+
+INSERT INTO item_templates (
+name, description, item_type, 
+base_hp, base_atk, base_def, base_spd, 
+base_crit_rate, base_crit_dmg, base_eva, base_lifesteal, 
+sell_amount
+) VALUES 
+('Rusty Sword', 'A battered iron sword. It barely cuts, but it gets the job done.', 'Weapon', 0, 10, 0, 0, 0.05, 1.50, 0.00, 0.00, 15),
+
+('Slayer''s Greatsword', 'A massive, heavy blade that favors raw damage over speed.', 'Weapon', 0, 35, 0, -2, 0.10, 1.60, 0.00, 0.00, 120),
+
+('Assassin''s Dagger', 'Lightweight and exceptionally sharp. Perfect for exploiting vital spots.', 'Weapon', 0, 12, 0, 4, 0.25, 2.00, 0.02, 0.00, 95),
+
+('Cursed Bloodpike', 'A spear that thirsts for vital fluid. It heals the wielder on impact.', 'Weapon', 0, 22, 0, 1, 0.08, 1.50, 0.00, 0.12, 210),
+
+('Battered Wooden Shield', 'Splintering wood held together by rusted bands.', 'Shield', 20, 0, 5, -1, 0.00, 0.00, 0.01, 0.00, 10),
+
+('Tower Shield', 'A massive wall of iron. Grants immense defense at the cost of attack tempo.', 'Shield', 80, 0, 25, -4, 0.00, 0.00, 0.00, 0.00, 140),
+
+('Buckler', 'A small metal shield designed for parrying and quick redirection.', 'Shield', 15, 2, 8, 2, 0.02, 0.00, 0.05, 0.00, 75),
+
+('Ragged Hood', 'Faded cloth that offers minor concealment.', 'Helmet', 10, 0, 2, 1, 0.00, 0.00, 0.02, 0.00, 8),
+
+('Knight''s Helm', 'Sturdy steel headwear offering excellent standard protection.', 'Helmet', 30, 0, 12, -1, 0.00, 0.00, 0.00, 0.00, 85),
+
+('Tattered Cloth Garb', 'Barely qualifies as clothing, let alone armor.', 'Chestplate', 15, 0, 3, 2, 0.00, 0.00, 0.01, 0.00, 12),
+
+('Steel Breastplate', 'A beautifully forged piece of defensive plate armor.', 'Chestplate', 100, 0, 30, -3, 0.00, 0.00, 0.00, 0.00, 250),
+
+('Shadow Rogue Leather', 'Darkened, reinforced leather that keeps your movements silent.', 'Chestplate', 45, 4, 14, 3, 0.05, 0.10, 0.06, 0.00, 190),
+
+('Leather Greaves', 'Basic leg guards made from boiled leather.', 'Leggings', 25, 0, 6, 1, 0.00, 0.00, 0.02, 0.00, 45),
+
+('Steelplated Legguards', 'Reinforced steel tassets that offer great protection at the cost of mobility.', 'Leggings', 65, 0, 22, -3, 0.00, 0.00, 0.00, 0.00, 150),
+
+('Heavy Iron Sabatons', 'Thick, clunky iron boots that make running difficult but stomping easy.', 'Boots', 40, 0, 15, -2, 0.00, 0.00, 0.00, 0.00, 70),
+
+('Swift-Step Boots', 'Lightweight footwear woven with enchanted fibers.', 'Boots', 15, 0, 4, 6, 0.00, 0.00, 0.08, 0.00, 110),
+
+('Gold Ring of Greed', 'A shiny band that glimmers in the dark.', 'Accessory', 0, 2, 0, 1, 0.02, 0.05, 0.00, 0.00, 300),
+
+('Vampire''s Amulet', 'A sinister pendant housing a droplet of eternal blood.', 'Accessory', -10, 5, 0, 0, 0.04, 0.00, 0.00, 0.06, 180);
+
+
+INSERT INTO enemies 
+    (name, type, level, base_hp, base_atk, base_def, base_spd, base_crit_rate, base_crit_dmg, base_eva, base_lifesteal, base_expdrop, base_golddrop)
+VALUES
+    ('Frail Skeleton', 'Normal', 1, 35, 6, 2, 85, 0.05, 1.50, 0.00, 0.00, 15, 8),
+    ('Goblin Thief', 'Normal', 2, 50, 10, 3, 115, 0.15, 1.60, 0.10, 0.00, 25, 20),
+    ('Vampiric Bat', 'Normal', 2, 40, 9, 1, 125, 0.10, 1.50, 0.15, 0.20, 22, 12),
+    ('Slime Blob', 'Normal', 1, 25, 4, 1, 70, 0.00, 1.50, 0.05, 0.00, 10, 5),
+    ('Dungeon Rat', 'Normal', 1, 20, 5, 0, 110, 0.08, 1.50, 0.12, 0.00, 8, 4),
+    ('Zombie Wanderer', 'Normal', 2, 65, 8, 4, 65, 0.02, 1.50, 0.00, 0.05, 28, 10),
+    ('Orc Berserker', 'Normal', 4, 110, 22, 6, 90, 0.20, 1.75, 0.00, 0.05, 55, 35),
+    ('Stone Golem', 'Normal', 5, 180, 15, 20, 60, 0.00, 1.50, 0.00, 0.00, 70, 40),
+    ('Dark Sorcerer', 'Normal', 5, 85, 26, 4, 100, 0.08, 1.50, 0.05, 0.00, 75, 50),
+    ('Malakor the Desolate Dragon', 'Boss', 5, 750, 55, 30, 105, 0.12, 1.80, 0.02, 0.00, 500, 350);
