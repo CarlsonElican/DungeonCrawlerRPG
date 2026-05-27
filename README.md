@@ -38,3 +38,10 @@ uvicorn src.main:app --reload
 Run when you install new Python packages, so dependencies are consistent
 pip freeze > requirements.txt
 ```
+
+Database
+psql postgresql://neondb_owner:npg_vlS3fQw4ZWuy@ep-lingering-queen-amgoaoeh-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+\c rpg_game to get into Database
+
+\d to see all the tables 
