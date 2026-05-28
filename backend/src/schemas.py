@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+
 class CharacterBase(BaseModel):
     name: str
     base_hp: int
@@ -14,8 +15,10 @@ class CharacterBase(BaseModel):
     base_lifesteal: float = 0.0
     starter_skill: Optional[str] = None
 
+
 class CharacterCreate(CharacterBase):
     user_id: int
+
 
 class CharacterResponse(CharacterBase):
     character_id: int
@@ -38,6 +41,7 @@ class CharacterResponse(CharacterBase):
     class Config:
         from_attributes = True
 
+
 class GameRunResponse(BaseModel):
     run_id: int
     character_id: int
@@ -48,9 +52,11 @@ class GameRunResponse(BaseModel):
     events_required: int
     boss_unlocked: bool
 
+
 class EventCompletionRequest(BaseModel):
     event_template_id: int
     event_result_id: int
+
 
 class InventoryItemResponse(BaseModel):
     inventory_item_id: int
@@ -63,9 +69,11 @@ class InventoryItemResponse(BaseModel):
     total_item_def: int
     item_effect: Optional[str]
 
+
 class EquipItemRequest(BaseModel):
     inventory_item_id: int
     slot: str
+
 
 class ShopOfferResponse(BaseModel):
     item_template_id: int
@@ -77,11 +85,13 @@ class ShopOfferResponse(BaseModel):
     dynamic_gold_cost: int
     item_effect: Optional[str]
 
+
 class EventTemplateResponse(BaseModel):
     event_template_id: int
     name: str
     event_type: str
     description: str
+
 
 class EventResultResponse(BaseModel):
     event_result_id: int
@@ -89,14 +99,17 @@ class EventResultResponse(BaseModel):
     notes: str
     # We don't necessarily want to spoil the stat changes to the UI before it happens
 
+
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
 
+
 class UserLogin(BaseModel):
     username: str
     password: str
+
 
 class UserResponse(BaseModel):
     user_id: int
@@ -104,9 +117,25 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+class CombatInitiativeRequest(BaseModel):
+    event_template_id: int
+
+
+class CombatResponse(BaseModel):
+    victory: bool
+    player_final_hp: int
+    enemy_final_hp: int
+    gold_earned: int
+    exp_earned: int
+    level_up_triggered: bool
+    combat_log: List[str]
