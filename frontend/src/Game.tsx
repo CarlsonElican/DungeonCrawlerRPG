@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
 import {
   Swords, Heart, Shield, Zap, Sparkles, Skull, Coins, LogOut, ChevronRight, Store, UserPlus, UserCheck, ArrowLeft, Trash2
@@ -85,6 +85,24 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
   const [simEnemyHp, setSimEnemyHp] = useState<number>(10);
   const [enemyMaxHp, setEnemyMaxHp] = useState<number>(10);
   const [enemyName, setEnemyName] = useState<string>("Monster");
+
+  // 📜 DOM References to lock scroll positions to the bottom
+  const combatLogRef = useRef<HTMLDivElement>(null);
+  const terminalLogRef = useRef<HTMLDivElement>(null);
+
+  // 🚀 Auto-scroll trigger logic for the active combat text engine box
+  useEffect(() => {
+    if (combatLogRef.current) {
+      combatLogRef.current.scrollTop = combatLogRef.current.scrollHeight;
+    }
+  }, [simulatedLog]);
+
+  // 🚀 Auto-scroll trigger logic for the primary upper room history terminal
+  useEffect(() => {
+    if (terminalLogRef.current) {
+      terminalLogRef.current.scrollTop = terminalLogRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   const fetchCharacters = useCallback(async () => {
     try {
@@ -389,14 +407,12 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
 
               <div className="character-select-grid">
                 {characters.map(c => (
-                  // ⚔️ UPDATED CONTAINER: Holds selection row and delete button side-by-side
                   <div key={c.character_id} style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
                     <button onClick={() => selectCharacter(c)} className="character-select-row" style={{ flex: 1 }}>
                       <span>⚔️ {c.name}</span>
                       <span className="character-select-badge">Lv. {c.level}</span>
                     </button>
 
-                    {/* Trash Delete Action Button */}
                     <button
                       onClick={(e) => deleteCharacter(e, c.character_id, c.name)}
                       style={{
@@ -513,8 +529,9 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
         </div>
 
         {/* Dashboard Display Components */}
+        {/* ⚔️ UPDATED: Added a ref here to handle auto-scrolling on text updates */}
         <div className="interactive-screen-panel">
-          <div className="terminal-scroll-log">
+          <div className="terminal-scroll-log" ref={terminalLogRef} style={{ overflowY: 'auto' }}>
             {logs.map((log, i) => (
               <div key={i} style={{ color: i === logs.length - 1 ? 'var(--accent)' : 'var(--text)' }}>{log}</div>
             ))}
@@ -637,7 +654,8 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
                   </div>
                 </div>
 
-                <div className="combat-scroll-box">
+                {/* ⚔️ UPDATED: Added a ref and scroll forcing rules here */}
+                <div className="combat-scroll-box" ref={combatLogRef} style={{ overflowY: 'auto' }}>
                   {simulatedLog.map((line, idx) => {
                     let displayColor = '#fff';
                     if (line.includes('🩸')) displayColor = '#f87171';
