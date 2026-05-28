@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
 import {
-  Swords, Heart, Shield, Zap, Sparkles, Skull, Coins, LogOut, ChevronRight, Store, UserPlus, UserCheck, ArrowLeft, Trash2
+  Swords, Heart, Shield, Zap, Sparkles, Coins, LogOut, ChevronRight, Store, UserPlus, UserCheck, ArrowLeft, Trash2
 } from 'lucide-react';
 import './app.css';
 import { getEnemySprite, getPlayerSprite } from './config/sprites';
@@ -86,18 +86,15 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
   const [enemyMaxHp, setEnemyMaxHp] = useState<number>(10);
   const [enemyName, setEnemyName] = useState<string>("Monster");
 
-  // 📜 DOM References to lock scroll positions to the bottom
   const combatLogRef = useRef<HTMLDivElement>(null);
   const terminalLogRef = useRef<HTMLDivElement>(null);
 
-  // 🚀 Auto-scroll trigger logic for the active combat text engine box
   useEffect(() => {
     if (combatLogRef.current) {
       combatLogRef.current.scrollTop = combatLogRef.current.scrollHeight;
     }
   }, [simulatedLog]);
 
-  // 🚀 Auto-scroll trigger logic for the primary upper room history terminal
   useEffect(() => {
     if (terminalLogRef.current) {
       terminalLogRef.current.scrollTop = terminalLogRef.current.scrollHeight;
@@ -529,7 +526,6 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
         </div>
 
         {/* Dashboard Display Components */}
-        {/* ⚔️ UPDATED: Added a ref here to handle auto-scrolling on text updates */}
         <div className="interactive-screen-panel">
           <div className="terminal-scroll-log" ref={terminalLogRef} style={{ overflowY: 'auto' }}>
             {logs.map((log, i) => (
@@ -654,7 +650,6 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
                   </div>
                 </div>
 
-                {/* ⚔️ UPDATED: Added a ref and scroll forcing rules here */}
                 <div className="combat-scroll-box" ref={combatLogRef} style={{ overflowY: 'auto' }}>
                   {simulatedLog.map((line, idx) => {
                     let displayColor = '#fff';
