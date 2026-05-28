@@ -1,7 +1,15 @@
-INSERT INTO event_templates (name, event_type, description)
-VALUES
+INSERT INTO event_templates (name, event_type, description) VALUES
     ('Slime Ambush', 'Combat', 'A slime drops from the ceiling and attacks.'),
     ('Abandoned Chest', 'Treasure', 'A locked chest sits in the corner of the room.'),
     ('Healing Fountain', 'Rest', 'A glowing fountain restores some health.'),
     ('Dark Shrine', 'Risk', 'A shrine offers power at a health cost.'),
-    ('Merchant Camp', 'Shop', 'A traveling merchant offers items for sale.');
+    ('Merchant Camp', 'Shop', 'A traveling merchant offers items for sale.'),
+    ('Shadowy Ambush', 'Combat', 'Eyes flash in the darkness. An aggressive creature lunges from the shadows!'),
+    ('Guarded Passageway', 'Combat', 'A hostile denizen stands watch over a narrow corridor, weapons drawn.'),
+    ('Disturbed Nest', 'Combat', 'You step into a forgotten cavern, instantly drawing the ire of a territorial beast.'),
+    ('A Foe Approaches', 'Combat', 'Heavy footsteps echo down the stone corridor as a dungeon dweller spots you and charges.'),
+    ('Unholy Awakening', 'Combat', 'A dark presence shifts in the room, materializing into a lethal adversary ready for blood.'),
+    ('The Loot Protector', 'Combat', 'You spot a small pile of gold, but a fierce monster steps out to defend its hoard!'),
+    ('Barricaded Room', 'Combat', 'You break through a rotten wooden door and surprise a hostile creature camping inside.'),
+    ('Ominous Ritual', 'Combat', 'Chanting echoes through the halls. A figure turns to look at you, gathering dark magic in their hands!'),
+    ('The Dragon Lair', 'Combat', 'The floor burns with ash and soot. A massive silhouette moves in the shadows-Malakor awaits!');
