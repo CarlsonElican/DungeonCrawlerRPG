@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
 import {
-  Swords, Heart, Shield, Zap, Sparkles, Skull, Coins, LogOut, ChevronRight, Store, UserPlus, UserCheck
+  Swords, Heart, Shield, Zap, Sparkles, Skull, Coins, LogOut, ChevronRight, Store, UserPlus, UserCheck, ArrowLeft, Trash2
 } from 'lucide-react';
 import './app.css';
+import { getEnemySprite, getPlayerSprite } from './config/sprites';
 
 interface User {
   user_id: number;
@@ -140,7 +141,7 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
       setActiveRun(res.data);
       addLog(`Resuming run at Floor ${res.data.current_floor}, Room ${res.data.current_room}.`);
     } catch (err) {
-      addLog("No active run found. Ready to start a new adventure.");
+      addLog("No active run found. Ready to explore.");
     }
   };
 
@@ -178,25 +179,44 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
     }
   };
 
-  const startNewRun = async () => {
-    if (!selectedChar) return;
-    setLoading(true);
+  const deleteCharacter = async (e: React.MouseEvent, characterId: number, characterName: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to permanently delete ${characterName}?`)) return;
+
     try {
-      const res = await api.post(`/runs/start/${selectedChar.character_id}`);
-      setActiveRun(res.data);
-      addLog("Adventure initialized! Ready to face the unknown dangers...");
+      await api.delete(`/characters/${characterId}`);
+      setCharacters(prev => prev.filter(c => c.character_id !== characterId));
+      addLog(`Character ${characterName} was permanently deleted.`);
     } catch (err) {
-      addLog("Error starting run.");
-    } finally {
-      setLoading(false);
+      addLog("Failed to delete character. Ensure backend router supports DELETE /characters/{id}");
     }
   };
 
   const openShop = async () => {
-    if (!activeRun) return;
+    if (!selectedChar) return;
     setLoading(true);
     try {
-      const res = await api.get(`/shop/offers/${activeRun.run_id}`);
+      let currentRun = activeRun;
+
+      if (!currentRun) {
+        setCombatResult(null);
+        setSimulatedLog([]);
+        setCurrentSimIndex(0);
+        setCurrentEvent(null);
+
+        const runRes = await api.post(`/runs/start/${selectedChar.character_id}`);
+        currentRun = runRes.data;
+        setActiveRun(currentRun);
+        addLog("Stepped into the underground trading outpost...");
+      }
+
+      if (!currentRun) {
+        addLog("Unable to establish a secure connection to the dungeon servers.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await api.get(`/shop/offers/${currentRun.run_id}`);
       setShopOffers(res.data);
       setIsInShop(true);
       setIsInInventory(false);
@@ -237,9 +257,22 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
   };
 
   const exploreNextRoom = async () => {
-    if (!activeRun || !selectedChar) return;
+    if (!selectedChar) return;
     setLoading(true);
     try {
+      let currentRun = activeRun;
+
+      if (!currentRun) {
+        setCombatResult(null);
+        setSimulatedLog([]);
+        setCurrentSimIndex(0);
+
+        const runRes = await api.post(`/runs/start/${selectedChar.character_id}`);
+        currentRun = runRes.data;
+        setActiveRun(currentRun);
+        addLog("Crossed the heavy iron gates into the depths...");
+      }
+
       const res = await api.get(`/events/next?level=${selectedChar.level}`);
       const eventType = res.data.template.event_type.toLowerCase();
 
@@ -247,31 +280,43 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
         addLog(res.data.template.description);
       }
 
+      setCurrentEvent(res.data);
+
       if (eventType === 'enemy' || eventType === 'monster' || eventType === 'combat') {
-        const parsedEnemyName = res.data.result.enemy_name || "Unknown Horrific Foe";
-        addLog(`Encountered a dangerous foe: ${parsedEnemyName}!`);
-
-        const combatRes = await api.post(`/combat/resolve/${activeRun.run_id}`, {
-          event_template_id: res.data.template.event_template_id
-        });
-
-        setEnemyName(parsedEnemyName);
-        setEnemyMaxHp(res.data.result.enemy_hp || 40);
-        setSimEnemyHp(res.data.result.enemy_hp || 40);
-        setSimPlayerHp(selectedChar.current_hp ?? selectedChar.total_hp);
-        setSimulatedLog([]);
-        setCurrentSimIndex(0);
-
-        setCombatResult(combatRes.data);
-
-        if (!combatRes.data.victory) {
-          setActiveRun(null);
-        }
-      } else {
-        setCurrentEvent(res.data);
+        addLog(`Encountered a dangerous foe: ${res.data.result.enemy_name || "Unknown Horrific Foe"}!`);
       }
     } catch (err) {
       addLog("Failed to explore the room safely. (Check terminal logs)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startCombat = async () => {
+    if (!activeRun || !currentEvent || !selectedChar) return;
+    setLoading(true);
+    try {
+      const parsedEnemyName = currentEvent.result.enemy_name || "Unknown Horrific Foe";
+
+      const combatRes = await api.post(`/combat/resolve/${activeRun.run_id}`, {
+        event_template_id: currentEvent.template.event_template_id
+      });
+
+      setEnemyName(parsedEnemyName);
+      setEnemyMaxHp(currentEvent.result.enemy_hp || 40);
+      setSimEnemyHp(currentEvent.result.enemy_hp || 40);
+      setSimPlayerHp(selectedChar.current_hp ?? selectedChar.total_hp);
+      setSimulatedLog([]);
+      setCurrentSimIndex(0);
+
+      setCombatResult(combatRes.data);
+      setCurrentEvent(null);
+
+      if (!combatRes.data.victory) {
+        setActiveRun(null);
+      }
+    } catch (err) {
+      addLog("Error initiating combat sequence.");
     } finally {
       setLoading(false);
     }
@@ -344,13 +389,38 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
 
               <div className="character-select-grid">
                 {characters.map(c => (
-                  <button key={c.character_id} onClick={() => selectCharacter(c)} className="character-select-row">
-                    <span>⚔️ {c.name}</span>
-                    <span className="character-select-badge">Lv. {c.level}</span>
-                  </button>
+                  // ⚔️ UPDATED CONTAINER: Holds selection row and delete button side-by-side
+                  <div key={c.character_id} style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                    <button onClick={() => selectCharacter(c)} className="character-select-row" style={{ flex: 1 }}>
+                      <span>⚔️ {c.name}</span>
+                      <span className="character-select-badge">Lv. {c.level}</span>
+                    </button>
+
+                    {/* Trash Delete Action Button */}
+                    <button
+                      onClick={(e) => deleteCharacter(e, c.character_id, c.name)}
+                      style={{
+                        padding: '12px',
+                        backgroundColor: '#1f2937',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background-color 0.2s'
+                      }}
+                      title="Delete Character"
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d1a1a'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 ))}
 
-                <button onClick={() => setIsCreating(true)} className="btn-forge-hero">
+                <button onClick={() => setIsCreating(true)} className="btn-forge-hero" style={{ width: '100%' }}>
                   <UserPlus size={18} /> Forge New Hero
                 </button>
               </div>
@@ -372,62 +442,74 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
       <div className="game-main-grid">
 
         {/* Sidebar Component */}
-        <div className="game-sidebar-panel">
-          <div className="sidebar-profile-header">
-            <h3 className="sidebar-profile-title">{selectedChar.name}</h3>
-            <span className="sidebar-profile-level">Lv. {selectedChar.level}</span>
+        <div className="game-sidebar-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="sidebar-profile-header">
+              <h3 className="sidebar-profile-title">{selectedChar.name}</h3>
+              <span className="sidebar-profile-level">Lv. {selectedChar.level}</span>
+            </div>
+
+            <div className="sidebar-vital-list">
+              <div className="sidebar-vital-row">
+                <span className="sidebar-vital-label">
+                  <Heart size={16} color="#ef4444" fill="#ef4444" /> Health
+                </span>
+                <span className="sidebar-vital-value">
+                  {combatResult ? simPlayerHp : (selectedChar.current_hp ?? selectedChar.total_hp)} / {selectedChar.total_hp}
+                </span>
+              </div>
+              <div className="sidebar-vital-row">
+                <span className="sidebar-vital-label"><Coins size={16} color="#fbbf24" fill="#fbbf24" /> Gold Wealth</span>
+                <span className="sidebar-vital-value" style={{ color: '#fbbf24' }}>{selectedChar.current_gold}</span>
+              </div>
+            </div>
+
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.8rem', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attributes Matrix</h4>
+            <div className="attribute-matrix-container">
+              <div className="attribute-matrix-row">
+                <span><Swords size={14} color="#9ca3af" /> Attack Power</span>
+                <span className="attribute-matrix-value">{selectedChar.total_atk}</span>
+              </div>
+              <div className="attribute-matrix-row">
+                <span><Shield size={14} color="#9ca3af" /> Defense Rating</span>
+                <span className="attribute-matrix-value">{selectedChar.total_def}</span>
+              </div>
+              <div className="attribute-matrix-row">
+                <span><Zap size={14} color="#9ca3af" /> Speed Stat</span>
+                <span className="attribute-matrix-value">{selectedChar.total_spd}</span>
+              </div>
+              <div className="attribute-matrix-row">
+                <span><Sparkles size={14} color="#9ca3af" /> Evasion Rate</span>
+                <span className="attribute-matrix-value">{(selectedChar.total_eva * 100).toFixed(0)}%</span>
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '6px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)' }}>
+                <span>Crit: {(selectedChar.total_crit_rate * 100).toFixed(0)}%</span>
+                <span>Lifesteal: {(selectedChar.total_lifesteal * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '20px 0' }} />
+
+            {activeRun ? (
+              <div className="sidebar-run-tracker">
+                <p className="sidebar-run-row"><span>Current Floor:</span> <strong className="sidebar-run-value">{activeRun.current_floor}</strong></p>
+                <p className="sidebar-run-row"><span>Room Matrix Index:</span> <strong className="sidebar-run-value">{activeRun.current_room}</strong></p>
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: '#4b5563', margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No active progression data.</p>
+            )}
           </div>
 
-          <div className="sidebar-vital-list">
-            <div className="sidebar-vital-row">
-              <span className="sidebar-vital-label">
-                <Heart size={16} color="#ef4444" fill="#ef4444" /> Health
-              </span>
-              <span className="sidebar-vital-value">
-                {combatResult ? simPlayerHp : (selectedChar.current_hp ?? selectedChar.total_hp)} / {selectedChar.total_hp}
-              </span>
-            </div>
-            <div className="sidebar-vital-row">
-              <span className="sidebar-vital-label"><Coins size={16} color="#fbbf24" fill="#fbbf24" /> Gold Wealth</span>
-              <span className="sidebar-vital-value" style={{ color: '#fbbf24' }}>{selectedChar.current_gold}</span>
-            </div>
+          <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+            <button
+              onClick={() => setSelectedChar(null)}
+              className="btn-back-selection"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', fontSize: '0.85rem', fontWeight: '600', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--text-h)', cursor: 'pointer' }}
+            >
+              <ArrowLeft size={14} /> Back to Heroes
+            </button>
           </div>
-
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.8rem', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attributes Matrix</h4>
-          <div className="attribute-matrix-container">
-            <div className="attribute-matrix-row">
-              <span><Swords size={14} color="#9ca3af" /> Attack Power</span>
-              <span className="attribute-matrix-value">{selectedChar.total_atk}</span>
-            </div>
-            <div className="attribute-matrix-row">
-              <span><Shield size={14} color="#9ca3af" /> Defense Rating</span>
-              <span className="attribute-matrix-value">{selectedChar.total_def}</span>
-            </div>
-            <div className="attribute-matrix-row">
-              <span><Zap size={14} color="#9ca3af" /> Speed Stat</span>
-              <span className="attribute-matrix-value">{selectedChar.total_spd}</span>
-            </div>
-            <div className="attribute-matrix-row">
-              <span><Sparkles size={14} color="#9ca3af" /> Evasion Rate</span>
-              <span className="attribute-matrix-value">{(selectedChar.total_eva * 100).toFixed(0)}%</span>
-            </div>
-            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '6px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)' }}>
-              <span>Crit: {(selectedChar.total_crit_rate * 100).toFixed(0)}%</span>
-              <span>Lifesteal: {(selectedChar.total_lifesteal * 100).toFixed(0)}%</span>
-            </div>
-          </div>
-
-          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '20px 0' }} />
-
-          {activeRun ? (
-            <div className="sidebar-run-tracker">
-              <p className="sidebar-run-row"><span>Current Floor:</span> <strong className="sidebar-run-value">{activeRun.current_floor}</strong></p>
-              <p className="sidebar-run-row"><span>Room Matrix Index:</span> <strong className="sidebar-run-value">{activeRun.current_room}</strong></p>
-            </div>
-          ) : (
-            <p style={{ fontSize: '0.85rem', color: '#4b5563', margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No active progression data.</p>
-          )}
         </div>
 
         {/* Dashboard Display Components */}
@@ -439,25 +521,33 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
           </div>
 
           <div className="dynamic-panel-container">
-            {!activeRun ? (
-              <div className="center-state-notice">
-                <h3 className="center-state-title">Ready for Adventure?</h3>
-                <p className="center-state-desc">Step into unknown chambers to hunt items, secure gold, and grow stronger.</p>
-                <button onClick={startNewRun} disabled={loading} className="btn-adventure-start">Start Adventure</button>
-              </div>
-            ) : isInShop ? (
+            {isInShop ? (
               <div className="sub-panel-ui">
                 <h4 className="sub-panel-title" style={{ color: '#fbbf24' }}><Store size={22} /> Merchant Camp</h4>
                 <div className="sub-panel-grid">
                   {shopOffers.map((offer, i) => (
                     <button key={i} onClick={() => buyItem(offer)} className="sub-panel-card">
-                      <div style={{ color: offer.hex_color, fontWeight: '700', fontSize: '1.05rem', marginBottom: '4px' }}>[{offer.rarity_name}] {offer.item_name}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text)', margin: '4px 0' }}>{offer.item_effect || "No modifiers"}</div>
-                      <div style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>💰 {offer.dynamic_gold_cost} Gold</div>
+                      <div style={{ color: offer.hex_color, fontWeight: '700', fontSize: '1.05rem', marginBottom: '4px' }}>
+                        [{offer.rarity_name}] {offer.item_name}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text)', margin: '4px 0' }}>
+                        Standard Item
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                        💰 {offer.dynamic_gold_cost} Gold
+                      </div>
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setIsInShop(false)} className="btn-panel-close">Leave Shop</button>
+                <button
+                  onClick={() => {
+                    setIsInShop(false);
+                    addLog("You step out of the shop and back into the dark corridor.");
+                  }}
+                  className="btn-panel-close"
+                >
+                  Leave Shop
+                </button>
               </div>
             ) : isInInventory ? (
               <div className="sub-panel-ui">
@@ -473,7 +563,6 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
                           {item.is_equipped && <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: '800', backgroundColor: '#142f26', padding: '2px 6px', borderRadius: '4px' }}>EQUIPPED</span>}
                         </div>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-h)', marginTop: '4px' }}>C_ATK: +{item.total_item_atk} | C_DEF: +{item.total_item_def}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text)', fontStyle: 'italic', marginTop: '2px' }}>{item.item_effect || "No static effects"}</div>
                         {!item.is_equipped && (
                           <button
                             onClick={async () => {
@@ -499,27 +588,52 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setIsInInventory(false)} className="btn-panel-close">Close Backpack</button>
+                <button
+                  onClick={() => {
+                    setIsInInventory(false);
+                    addLog("You tuck your backpack away and resume your vigil.");
+                  }}
+                  className="btn-panel-close"
+                >
+                  Close Backpack
+                </button>
               </div>
             ) : combatResult ? (
               <div className="sub-panel-ui">
-                <div className="combat-stage-banner">
-                  <div className="combat-fighter-block">
+                <div className="combat-stage-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+
+                  {/* PLAYER SIDE */}
+                  <div className="combat-fighter-block" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                      <img
+                        src={getPlayerSprite()}
+                        alt={selectedChar.name}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', imageRendering: 'pixelated' }}
+                      />
+                    </div>
                     <h4 className="combat-fighter-name">{selectedChar.name}</h4>
-                    <div className="combat-hp-track">
+                    <div className="combat-hp-track" style={{ width: '100%', marginTop: '8px' }}>
                       <div className="combat-hp-fill" style={{ width: `${Math.max(0, (simPlayerHp / selectedChar.total_hp) * 100)}%`, backgroundColor: '#10b981' }}></div>
                     </div>
-                    <span className="combat-hp-text">HP: {simPlayerHp} / {selectedChar.total_hp}</span>
+                    <span className="combat-hp-text" style={{ marginTop: '4px' }}>HP: {simPlayerHp} / {selectedChar.total_hp}</span>
                   </div>
 
-                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text)', fontStyle: 'italic' }}>VS</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: 'var(--text)', fontStyle: 'italic' }}>VS</div>
 
-                  <div className="combat-fighter-block" style={{ textAlign: 'right' }}>
+                  {/* ENEMY SIDE */}
+                  <div className="combat-fighter-block" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                      <img
+                        src={getEnemySprite(enemyName)}
+                        alt={enemyName}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', imageRendering: 'pixelated' }}
+                      />
+                    </div>
                     <h4 className="combat-fighter-name" style={{ color: '#ef4444' }}>{enemyName}</h4>
-                    <div className="combat-hp-track">
+                    <div className="combat-hp-track" style={{ width: '100%', marginTop: '8px' }}>
                       <div className="combat-hp-fill" style={{ width: `${Math.max(0, (simEnemyHp / enemyMaxHp) * 100)}%`, backgroundColor: '#ef4444' }}></div>
                     </div>
-                    <span className="combat-hp-text">HP: {simEnemyHp} / {enemyMaxHp}</span>
+                    <span className="combat-hp-text" style={{ marginTop: '4px' }}>HP: {simEnemyHp} / {enemyMaxHp}</span>
                   </div>
                 </div>
 
@@ -561,6 +675,23 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
                   <p style={{ fontSize: '0.85rem', color: 'var(--text)', fontStyle: 'italic', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Swords size={14} /> Resolving structural battle calculations...</p>
                 )}
               </div>
+            ) : currentEvent && ['enemy', 'monster', 'combat'].includes(currentEvent.template.event_type.toLowerCase()) ? (
+              <div className="center-state-notice" style={{ border: '1px dashed #ef4444', padding: '24px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.02)' }}>
+                <h3 className="center-state-title" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <Swords size={22} /> Threat Detected
+                </h3>
+                <p className="center-state-desc" style={{ color: 'var(--text-h)' }}>
+                  A hostile <strong>{currentEvent.result.enemy_name || "Unknown Fiend"}</strong> bars your advance. Steel yourself.
+                </p>
+                <button
+                  onClick={startCombat}
+                  disabled={loading}
+                  className="btn-adventure-start"
+                  style={{ backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 4px 12px rgba(239,68,68,0.2)', fontWeight: '700' }}
+                >
+                  Fight Your Way In
+                </button>
+              </div>
             ) : !currentEvent ? (
               <div className="action-navigation-row">
                 <button onClick={exploreNextRoom} disabled={loading} className="action-nav-btn" style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}>Explore Chamber <ChevronRight size={18} /></button>
@@ -577,7 +708,6 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
           </div>
         </div>
       </div>
-      <button onClick={() => setSelectedChar(null)} className="btn-back-selection">Back to Character Selection</button>
     </div>
   );
 };
