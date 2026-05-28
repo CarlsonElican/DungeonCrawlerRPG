@@ -29,12 +29,12 @@ npm run dev
 ```
 cd backend
 
-(First-Time Only)
+(DO THIS FIRST TIME ONLY, AFTERWARD DON'T NEED TO DO THIS)
 python -m venv .venv
 .venv\Scripts\activate or source .venv/bin/activate
 pip install -r requirements.txt
 
-Run run the backend server
+(DO THIS TO RUN THE SERVER)
 uvicorn src.main:app --reload
 
 Run when you install new Python packages, so dependencies are consistent
@@ -43,6 +43,6 @@ pip freeze > requirements.txt
 
 Database
 
-\c rpg_game to get into Database
+database info is in .env backend for url
 
-\d to see all the tables 
+psql 'link' in command prompt 
