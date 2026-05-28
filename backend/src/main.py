@@ -323,9 +323,9 @@ def register_user(user_data: UserCreate):
             
             return cur.fetchone()
 
-@app.post("/api/users/login", response_model=Token)
+@app.post("/api/users/login")
 def login_user(login_data: UserLogin):
-    """Verifies credentials and returns a JWT access token"""
+    """Verifies credentials and returns a JWT access token along with user data"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE username = %s", (login_data.username,))
@@ -338,7 +338,14 @@ def login_user(login_data: UserLogin):
             cur.execute("UPDATE users SET last_login_at = NOW() WHERE user_id = %s", (user['user_id'],))
             
             access_token = create_access_token(data={"sub": user["username"]})
-            return {"access_token": access_token, "token_type": "bearer"}
+            
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user_id": user["user_id"],
+                "username": user["username"],
+                "email": user["email"]
+            }
 
 @app.get("/api/users/me", response_model=UserResponse)
 def read_users_me(current_user: dict = Depends(get_current_user)):

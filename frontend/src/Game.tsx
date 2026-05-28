@@ -98,27 +98,35 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
 
   const handleCreateCharacter = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newName.trim()) return;
+    
     setLoading(true);
     
-    // Basic Class Templates
-    const stats = {
-      Warrior: { base_hp: 120, base_atk: 15, base_def: 10, base_spd: 40, starter_skill: "Cleave" },
-      Rogue:   { base_hp: 80,  base_atk: 12, base_def: 5,  base_spd: 100, starter_skill: "Backstab", base_eva: 0.15 },
-      Tank:    { base_hp: 200, base_atk: 8,  base_def: 25, base_spd: 30, starter_skill: "Shield Slam" }
-    }[selectedClass as "Warrior" | "Rogue" | "Tank"] || { base_hp: 100, base_atk: 10, base_def: 10, base_spd: 50 };
+    // Custom specs: base hp is 10, atk is 5, def is 5, spd is 5
+    // Remaining attributes defaulted safely to match standard RPG balances
+    const characterPayload = {
+      name: newName,
+      user_id: currentUser.user_id,
+      base_hp: 10,
+      base_atk: 5,
+      base_def: 5,
+      base_spd: 5,
+      base_eva: 0.05,       // 5% default dodge
+      base_crit_rate: 0.05, // 5% default crit
+      base_crit_dmg: 1.50,  // 150% crit multiplier
+      base_lifesteal: 0.00,
+      starter_skill: "Strike"
+    };
 
     try {
-      const res = await api.post('/characters/create', {
-        name: newName,
-        user_id: currentUser.user_id,
-        ...stats
-      });
-      addLog(`Hero ${res.data.name} has been born!`);
+      const res = await api.post('/characters/create', characterPayload);
+      addLog(`Hero ${res.data.name} has been born with baseline stats!`);
       setCharacters([...characters, res.data]);
       setIsCreating(false);
       setSelectedChar(res.data);
+      setNewName(""); // Clear field
     } catch (err) {
-      addLog("Failed to create character.");
+      addLog("Failed to create character. Check backend logs.");
     } finally {
       setLoading(false);
     }
@@ -214,29 +222,31 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
         {isCreating ? (
           <div className="creation-panel">
             <h2>Forge a New Hero</h2>
+            <p style={{ fontSize: '0.9rem', color: '#888' }}>
+              Base Attributes: HP: 10 | ATK: 5 | DEF: 5 | SPD: 5
+            </p>
             <form onSubmit={handleCreateCharacter}>
-              <input 
-                placeholder="Hero Name" 
-                value={newName} 
-                onChange={e => setNewName(e.target.value)} 
-                required 
-              />
-              <div className="class-selector">
-                {['Warrior', 'Rogue', 'Tank'].map(cls => (
-                  <label key={cls}>
-                    <input 
-                      type="radio" 
-                      name="class" 
-                      value={cls} 
-                      checked={selectedClass === cls} 
-                      onChange={() => setSelectedClass(cls)} 
-                    />
-                    {cls}
-                  </label>
-                ))}
+              <div style={{ marginBottom: '15px' }}>
+                <label htmlFor="charName" style={{ display: 'block', marginBottom: '5px' }}>
+                  Character Name:
+                </label>
+                <input 
+                  id="charName"
+                  placeholder="Enter character name..." 
+                  value={newName} 
+                  onChange={e => setNewName(e.target.value)} 
+                  maxLength={25}
+                  required 
+                  autoFocus
+                />
               </div>
-              <button type="submit" disabled={loading}>Create Character</button>
-              <button type="button" onClick={() => setIsCreating(false)}>Cancel</button>
+              
+              <button type="submit" disabled={loading || !newName.trim()}>
+                {loading ? "Initializing..." : "Create Character"}
+              </button>
+              <button type="button" className="cancel-btn" onClick={() => setIsCreating(false)}>
+                Cancel
+              </button>
             </form>
           </div>
         ) : (
@@ -245,7 +255,7 @@ const Game: React.FC<GameProps> = ({ currentUser, onLogout }) => {
             <div className="character-list">
               {characters.map(c => (
                 <button key={c.character_id} onClick={() => selectCharacter(c)}>
-                  {c.name} (Lv. {c.level} {c.starter_skill})
+                  {c.name} (Lv. {c.level})
                 </button>
               ))}
               <button className="new-hero-btn" onClick={() => setIsCreating(true)}>

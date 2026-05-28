@@ -44,6 +44,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ onLoginSuccess }) => {
       const response = await api.post('/users/login', { username, password });
       setMessage(`Login successful! Welcome, ${response.data.username}.`);
       onLoginSuccess(response.data);
+      localStorage.setItem("token", response.data.access_token);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed. Check your username and password.');
     }

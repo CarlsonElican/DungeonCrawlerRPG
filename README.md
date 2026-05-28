@@ -28,7 +28,9 @@ npm run dev
 
 ```
 cd backend
-python -m venv .venv (First-Time Only)
+
+(First-Time Only)
+python -m venv .venv
 .venv\Scripts\activate or source .venv/bin/activate
 pip install -r requirements.txt
 
