@@ -83,7 +83,7 @@ def resolve_combat(
                 gold_earned = enemy["base_golddrop"]
                 exp_earned = enemy["base_expdrop"]
 
-                new_exp = player["exp"] + exp_earned
+                new_exp = player["experience"] + exp_earned
                 if new_exp >= player["exp_cap"]:
                     level_up_triggered = True
 
@@ -98,7 +98,7 @@ def resolve_combat(
                         base_hp = CASE WHEN %s THEN base_hp + 15 ELSE base_hp END,
                         base_atk = CASE WHEN %s THEN base_atk + 3 ELSE base_atk END,
                         base_def = CASE WHEN %s THEN base_def + 2 ELSE base_def END,
-                        exp = CASE WHEN %s THEN ( %s - exp_cap ) ELSE %s END,
+                        experience = CASE WHEN %s THEN ( %s - exp_cap ) ELSE %s END,
                         exp_cap = CASE WHEN %s THEN ROUND(exp_cap * 1.5) ELSE exp_cap END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE character_id = %s;
@@ -110,7 +110,7 @@ def resolve_combat(
                         level_up_triggered,
                         level_up_triggered,
                         level_up_triggered,
-                        level_up_triggered,
+                        level_up_triggered, 
                         new_exp,
                         new_exp,
                         level_up_triggered,

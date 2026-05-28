@@ -29,9 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Enforce the /api prefix here for routed endpoints to mirror frontend layout configuration rules
-app.include_router(combat_router, prefix="/api/combat", tags=["Combat"])
-
 
 @app.get("/")
 def root():
@@ -39,6 +36,8 @@ def root():
 
 
 # --- API ENDPOINTS ---
+
+app.include_router(combat_router, prefix="/api/combat", tags=["Combat"])
 
 
 @app.get("/api/game-status")
@@ -421,15 +420,14 @@ def get_character_inventory(
                     r.hex_color,
                     ii.is_equipped,
                     (it.base_atk + ii.random_atk) AS total_item_atk,
-                    (it.base_def + ii.random_def) AS total_item_def,
-                    it.item_effect
+                    (it.base_def + ii.random_def) AS total_item_def
                 FROM inventory_items ii
                 JOIN item_templates it ON ii.item_template_id = it.item_template_id
                 JOIN rarity r ON ii.rarity_id = r.rarity_id
                 JOIN characters c ON ii.character_id = c.character_id
                 WHERE ii.character_id = %s AND c.user_id = %s
                 ORDER BY ii.is_equipped DESC, r.rarity_id DESC;
-            """,
+                """,
                 (character_id, current_user["user_id"]),
             )
             return cur.fetchall()
@@ -477,33 +475,55 @@ def equip_item(
             return {"message": f"Successfully equipped item to {request.slot}"}
 
 
-@app.get("/api/shop/offers/{run_id}", response_model=List[ShopOfferResponse])
+@app.get("/api/shop/offers/{run_id}")
 def get_shop_offers(run_id: int):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT current_day FROM game_runs WHERE run_id = %s", (run_id,)
-            )
-            run = cur.fetchone()
-            if not run:
-                raise HTTPException(status_code=404, detail="Run not found")
-
-            cur.execute(
                 """
                 SELECT 
-                    so.item_template_id,
-                    it.name AS item_name,
+                    so.item_template_id, 
+                    it.name AS item_name, 
                     it.item_type,
-                    r.rarity_id,
-                    r.rarity_name,
+                    r.rarity_name, 
                     r.hex_color,
-                    ROUND(so.price * r.sell_price_multiplier) AS dynamic_gold_cost,
-                    it.item_effect
+                    ROUND(so.price * COALESCE(r.sell_price_multiplier, 1.0))::INTEGER AS dynamic_gold_cost
                 FROM shop_offer so
                 JOIN item_templates it ON so.item_template_id = it.item_template_id
                 JOIN rarity r ON so.rarity_id = r.rarity_id
-                WHERE so.day_number = %s;
+                WHERE so.day_number = (
+                    SELECT COALESCE(current_day, 1) 
+                    FROM game_runs 
+                    WHERE run_id = %s
+                );
             """,
-                (run["current_day"],),
+                (run_id,),
             )
+
             return cur.fetchall()
+
+
+@app.delete("/api/characters/{character_id}", status_code=status.HTTP_200_OK)
+def delete_character(character_id: int, current_user: dict = Depends(get_current_user)):
+    """
+    Permanently purges a character profile.
+    PostgreSQL schema constraints cascade deletions to game_runs, inventory, and equipment.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT character_id FROM characters WHERE character_id = %s AND user_id = %s",
+                (character_id, current_user["user_id"]),
+            )
+            if not cur.fetchone():
+                raise HTTPException(
+                    status_code=404,
+                    detail="Character profile not found or unauthorized to delete.",
+                )
+
+            cur.execute(
+                "DELETE FROM characters WHERE character_id = %s AND user_id = %s",
+                (character_id, current_user["user_id"]),
+            )
+
+            return {"detail": "Hero profile and all dependent records cleanly wiped."}
