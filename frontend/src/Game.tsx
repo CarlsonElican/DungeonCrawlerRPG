@@ -10,7 +10,7 @@ import { InventoryPanel } from './components/game/InventoryPanel';
 import { LevelUpModal } from './components/game/LevelUpModal';
 import { ShopPanel } from './components/game/ShopPanel';
 import { TerminalLog } from './components/game/TerminalLog';
-import type { Character, CombatResult, EventCompletionResult, GameEvent, GameRun, InventoryItem, ShopOffer, UpgradeResult, User } from './types/game';
+import type { Character, CombatResult, GameEvent, GameRun, InventoryItem, ShopOffer, User } from './types/game';
 import './app.css';
 
 interface GameProps {
@@ -268,18 +268,11 @@ function Game({ currentUser, onLogout }: GameProps) {
   const buyItem = async (offer: ShopOffer) => {
     try {
       await api.post(`/shop/buy/${activeRun?.run_id}`, {
-        run_shop_offer_id: offer.run_shop_offer_id,
         item_template_id: offer.item_template_id,
         rarity_id: offer.rarity_id,
       });
       addLog(`Bought ${offer.item_name}!`);
-      setShopOffers(previousOffers =>
-        previousOffers.filter(shopOffer =>
-          offer.run_shop_offer_id
-            ? shopOffer.run_shop_offer_id !== offer.run_shop_offer_id
-            : shopOffer !== offer
-        )
-      );
+      setShopOffers(previousOffers => previousOffers.filter(shopOffer => shopOffer !== offer));
       await refreshSelectedCharacter();
     } catch (error: unknown) {
       const message = getApiErrorMessage(error) || "Purchase failed.";
@@ -333,35 +326,14 @@ function Game({ currentUser, onLogout }: GameProps) {
     }
   };
 
-  const upgradeItem = async (item: InventoryItem) => {
-    if (!selectedChar) return;
-
-    try {
-      const response = await api.post<UpgradeResult>(`/inventory/upgrade/${selectedChar.character_id}`, {
-        inventory_item_id: item.inventory_item_id,
-      });
-      addLog(`Upgraded ${item.item_name} to +${response.data.upgraded_level} for ${response.data.gold_spent} gold.`);
-      applyServerCharacter(response.data.character);
-      await openInventory();
-    } catch (error: unknown) {
-      const message = getApiErrorMessage(error) || "Failed to upgrade item.";
-      addLog(message);
-    }
-  };
-
   const exploreNextRoom = async () => {
     if (!selectedChar) return;
     setLoading(true);
 
     try {
-      const currentRun = await startRunIfNeeded("Crossed the heavy iron gates into the depths...");
+      await startRunIfNeeded("Crossed the heavy iron gates into the depths...");
 
-      if (!currentRun) {
-        addLog("Unable to establish a secure connection to the dungeon servers.");
-        return;
-      }
-
-      const response = await api.get<GameEvent>(`/runs/${currentRun.run_id}/next-event`);
+      const response = await api.get<GameEvent>(`/events/next?level=${selectedChar.level}`);
       const nextEvent = response.data;
       const eventType = nextEvent.template.event_type.toLowerCase();
 
@@ -402,10 +374,11 @@ function Game({ currentUser, onLogout }: GameProps) {
       setSimulatedLog([]);
       setCurrentSimIndex(0);
       setCombatResult(response.data);
-      if (response.data.run) {
-        setActiveRun(response.data.run);
-      }
       setCurrentEvent(null);
+
+      if (!response.data.victory) {
+        setActiveRun(null);
+      }
     } catch {
       addLog("Error initiating combat sequence.");
     } finally {
@@ -418,15 +391,18 @@ function Game({ currentUser, onLogout }: GameProps) {
     setLoading(true);
 
     try {
-      const response = await api.post<EventCompletionResult>(`/runs/${activeRun.run_id}/complete-event`, {
+      await api.post(`/runs/${activeRun.run_id}/complete-event`, {
         event_template_id: currentEvent.template.event_template_id,
         event_result_id: currentEvent.result.event_result_id,
       });
 
       addLog(currentEvent.result.notes);
-      setActiveRun(response.data.run);
-      applyServerCharacter(response.data.character);
+      setActiveRun({
+        ...activeRun,
+        current_room: activeRun.current_room + 1,
+      });
       setCurrentEvent(null);
+      await refreshSelectedCharacter();
     } catch {
       addLog("Error resolving event.");
     } finally {
@@ -435,16 +411,8 @@ function Game({ currentUser, onLogout }: GameProps) {
   };
 
   const advanceAfterCombat = async () => {
-    if (combatResult?.run) {
-      setActiveRun(combatResult.run);
-    }
-    if (combatResult?.character) {
-      applyServerCharacter(combatResult.character);
-      setSimPlayerHp(combatResult.character.current_hp);
-    } else {
-      await refreshSelectedCharacter();
-    }
     setCombatResult(null);
+    await refreshSelectedCharacter();
   };
 
   const refreshSelectedCharacter = async () => {
@@ -465,11 +433,6 @@ function Game({ currentUser, onLogout }: GameProps) {
         character.character_id === updatedCharacter.character_id ? updatedCharacter : character
       )
     );
-  };
-
-  const applyServerCharacter = (updatedCharacter: Character) => {
-    setSelectedChar(updatedCharacter);
-    updateCharacterCache(updatedCharacter);
   };
 
   const resetEncounterState = () => {
@@ -553,7 +516,7 @@ function Game({ currentUser, onLogout }: GameProps) {
           onEquipItem={equipItem}
           onSellItem={sellItem}
           onUnequipItem={unequipItem}
-          onUpgradeItem={upgradeItem}
+          onUpgradeItem={item => addLog(`Upgrade bench is not ready for ${item.item_name} yet.`)}
         />
       );
     }
@@ -586,7 +549,6 @@ function Game({ currentUser, onLogout }: GameProps) {
     return (
       <ActionNavigation
         loading={loading}
-        bossUnlocked={activeRun?.boss_unlocked}
         onExplore={exploreNextRoom}
         onOpenInventory={openInventory}
         onOpenShop={openShop}

@@ -27,13 +27,8 @@ export interface Character {
 
 export interface GameRun {
   run_id: number;
-  character_id: number;
-  current_day: number;
   current_floor: number;
   current_room: number;
-  events_completed: number;
-  events_required: number;
-  boss_unlocked: boolean;
 }
 
 export interface GameEvent {
@@ -59,12 +54,9 @@ export interface CombatResult {
   exp_earned: number;
   level_up_triggered: boolean;
   combat_log: string[];
-  run?: GameRun;
-  character?: Character;
 }
 
 export interface ShopOffer {
-  run_shop_offer_id?: number;
   item_template_id: number;
   item_name: string;
   description?: string | null;
@@ -108,7 +100,6 @@ export interface InventoryItem {
   rarity_name: string;
   hex_color: string;
   is_equipped: boolean;
-  upgraded_level: number;
   equipped_slot?: string | null;
   sell_amount: number;
   item_effect?: string | null;
@@ -136,18 +127,4 @@ export interface InventoryItem {
   total_item_crit_dmg: number;
   total_item_eva: number;
   total_item_lifesteal: number;
-}
-
-export interface EventCompletionResult {
-  message: string;
-  run: GameRun;
-  character: Character;
-}
-
-export interface UpgradeResult {
-  message: string;
-  inventory_item_id: number;
-  upgraded_level: number;
-  gold_spent: number;
-  character: Character;
 }

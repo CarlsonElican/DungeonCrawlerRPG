@@ -7,25 +7,18 @@ from src.schemas import (
     CharacterResponse,
     GameRunResponse,
     EventCompletionRequest,
-    EventCompletionResponse,
     InventoryItemResponse,
     EquipItemRequest,
     InventoryItemActionRequest,
     ShopOfferResponse,
     ShopPurchaseRequest,
-    UpgradeItemResponse,
     UserCreate,
     UserLogin,
     UserResponse,
 )
+from src.config import EVENT_TO_ENEMY_MAP
 from src.dependencies import get_current_user, pwd_context, create_access_token
 from src.routes.combat import router as combat_router
-from src.services.characters import fetch_character_sheet
-from src.services.events import get_next_event as choose_next_event
-from src.services.events import validate_event_result
-from src.services.items import upgrade_inventory_item
-from src.services.progression import advance_room_or_unlock_boss
-from src.services.shop import get_or_create_shop_offers, purchase_shop_offer
 from typing import List
 
 app = FastAPI(title="Dungeon Crawler RPG API")
@@ -230,39 +223,24 @@ def get_active_run(character_id: int):
             return run
 
 
-@app.post("/api/runs/{run_id}/complete-event", response_model=EventCompletionResponse)
-def complete_event(
-    run_id: int,
-    request: EventCompletionRequest,
-    current_user: dict = Depends(get_current_user),
-):
-    """Records non-combat event completion and advances run progress."""
+@app.post("/api/runs/{run_id}/complete-event")
+def complete_event(run_id: int, request: EventCompletionRequest):
+    """Records event completion and advances the room counter"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT gr.*
-                FROM game_runs gr
-                JOIN characters c ON c.character_id = gr.character_id
-                WHERE gr.run_id = %s
-                  AND c.user_id = %s
-                  AND gr.ended_at IS NULL
-                """,
-                (run_id, current_user["user_id"]),
+                "SELECT character_id, current_floor, current_room FROM game_runs WHERE run_id = %s",
+                (run_id,),
             )
             run = cur.fetchone()
             if not run:
                 raise HTTPException(status_code=404, detail="Run not found")
 
-            try:
-                er = validate_event_result(
-                    cur,
-                    request.event_template_id,
-                    request.event_result_id,
-                    run["current_floor"],
-                )
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc))
+            cur.execute(
+                "SELECT * FROM event_results WHERE event_result_id = %s",
+                (request.event_result_id,),
+            )
+            er = cur.fetchone()
 
             cur.execute(
                 """
@@ -314,48 +292,57 @@ def complete_event(
                 ),
             )
 
-            updated_run = advance_room_or_unlock_boss(cur, run_id)
-            updated_character = fetch_character_sheet(cur, run["character_id"])
-            return {
-                "message": "Event completed and progress saved",
-                "run": updated_run,
-                "character": updated_character,
-            }
+            cur.execute(
+                """
+                UPDATE game_runs 
+                SET current_room = current_room + 1, 
+                    events_completed = events_completed + 1, 
+                    boss_unlocked = CASE WHEN (events_completed + 1) >= events_required THEN TRUE ELSE boss_unlocked END,
+                    last_played_at = NOW() 
+                WHERE run_id = %s
+            """,
+                (run_id,),
+            )
+            return {"message": "Event completed and progress saved"}
 
 
 @app.get("/api/events/next", response_model=dict)
 def get_next_event(level: int = 1):
     with get_db() as conn:
         with conn.cursor() as cur:
-            try:
-                return choose_next_event(cur, level=level)
-            except ValueError as exc:
-                raise HTTPException(status_code=404, detail=str(exc))
+            cur.execute("SELECT * FROM event_templates ORDER BY RANDOM() LIMIT 1")
+            template = cur.fetchone()
 
+            if not template:
+                raise HTTPException(status_code=404, detail="No event templates found")
 
-@app.get("/api/runs/{run_id}/next-event", response_model=dict)
-def get_next_run_event(run_id: int, current_user: dict = Depends(get_current_user)):
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT gr.*
-                FROM game_runs gr
-                JOIN characters c ON c.character_id = gr.character_id
-                WHERE gr.run_id = %s
-                  AND c.user_id = %s
-                  AND gr.ended_at IS NULL
-                """,
-                (run_id, current_user["user_id"]),
-            )
-            run = cur.fetchone()
-            if not run:
-                raise HTTPException(status_code=404, detail="Active run not found")
+            if template["event_type"].lower() == "combat":
+                template_id = template["event_template_id"]
+                enemy_id = EVENT_TO_ENEMY_MAP.get(template_id, 4)
 
-            try:
-                return choose_next_event(cur, run=run)
-            except ValueError as exc:
-                raise HTTPException(status_code=404, detail=str(exc))
+                cur.execute("SELECT * FROM enemies WHERE enemy_id = %s", (enemy_id,))
+                enemy = cur.fetchone()
+
+                cur.execute("SELECT * FROM event_results WHERE event_result_id = 1")
+                result = cur.fetchone()
+
+                return {
+                    "template": template,
+                    "result": {
+                        "event_result_id": result["event_result_id"],
+                        "result_type": result["result_type"],
+                        "notes": result["notes"],
+                        "enemy_id": enemy["enemy_id"],
+                        "enemy_name": enemy["name"],
+                        "enemy_hp": enemy["base_hp"],
+                    },
+                }
+            else:
+                cur.execute(
+                    "SELECT * FROM event_results WHERE result_type != 'Victory' ORDER BY RANDOM() LIMIT 1"
+                )
+                result = cur.fetchone()
+                return {"template": template, "result": result}
 
 
 @app.post("/api/users/register", response_model=UserResponse)
@@ -435,7 +422,6 @@ def get_character_inventory(
                     r.rarity_name,
                     r.hex_color,
                     ii.is_equipped,
-                    ii.upgraded_level,
                     e.slot AS equipped_slot,
                     GREATEST(
                         1,
@@ -632,43 +618,13 @@ def sell_inventory_item(
             return {"message": "Item sold", "gold_earned": item["sell_amount"]}
 
 
-@app.post("/api/inventory/upgrade/{character_id}", response_model=UpgradeItemResponse)
-def upgrade_item(
-    character_id: int,
-    request: InventoryItemActionRequest,
-    current_user: dict = Depends(get_current_user),
-):
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            try:
-                upgrade = upgrade_inventory_item(
-                    cur,
-                    character_id,
-                    current_user["user_id"],
-                    request.inventory_item_id,
-                )
-            except ValueError as exc:
-                status_code = 400 if str(exc) in {
-                    "Not enough gold",
-                    "Item is already at max upgrade level",
-                } else 404
-                raise HTTPException(status_code=status_code, detail=str(exc))
-
-            updated_character = fetch_character_sheet(cur, character_id)
-            return {
-                "message": "Item upgraded",
-                **upgrade,
-                "character": updated_character,
-            }
-
-
 @app.get("/api/shop/offers/{run_id}", response_model=List[ShopOfferResponse])
 def get_shop_offers(run_id: int, current_user: dict = Depends(get_current_user)):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT gr.*
+                SELECT gr.run_id
                 FROM game_runs gr
                 JOIN characters c ON gr.character_id = c.character_id
                 WHERE gr.run_id = %s
@@ -677,11 +633,65 @@ def get_shop_offers(run_id: int, current_user: dict = Depends(get_current_user))
                 """,
                 (run_id, current_user["user_id"]),
             )
-            run = cur.fetchone()
-            if not run:
+            if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Active run not found")
 
-            return get_or_create_shop_offers(cur, run)
+            cur.execute(
+                """
+                WITH selected_templates AS (
+                    SELECT *
+                    FROM item_templates
+                    ORDER BY RANDOM()
+                    LIMIT 4
+                )
+                SELECT
+                    it.item_template_id,
+                    it.name AS item_name,
+                    it.description,
+                    it.item_type,
+                    r.rarity_id,
+                    r.rarity_name,
+                    r.hex_color,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * 2 * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS dynamic_gold_cost,
+                    NULL::TEXT AS item_effect,
+                    it.base_hp AS base_item_hp,
+                    it.base_atk AS base_item_atk,
+                    it.base_def AS base_item_def,
+                    it.base_spd AS base_item_spd,
+                    it.base_crit_rate::FLOAT AS base_item_crit_rate,
+                    it.base_crit_dmg::FLOAT AS base_item_crit_dmg,
+                    it.base_eva::FLOAT AS base_item_eva,
+                    it.base_lifesteal::FLOAT AS base_item_lifesteal,
+                    ROUND(it.base_hp * (r.stat_multiplier - 1))::INTEGER AS bonus_item_hp,
+                    ROUND(it.base_atk * (r.stat_multiplier - 1))::INTEGER AS bonus_item_atk,
+                    ROUND(it.base_def * (r.stat_multiplier - 1))::INTEGER AS bonus_item_def,
+                    ROUND(it.base_spd * (r.stat_multiplier - 1))::INTEGER AS bonus_item_spd,
+                    ROUND(it.base_crit_rate * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_rate,
+                    ROUND(it.base_crit_dmg * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_dmg,
+                    ROUND(it.base_eva * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_eva,
+                    ROUND(it.base_lifesteal * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_lifesteal,
+                    ROUND(it.base_hp * r.stat_multiplier)::INTEGER AS total_item_hp,
+                    ROUND(it.base_atk * r.stat_multiplier)::INTEGER AS total_item_atk,
+                    ROUND(it.base_def * r.stat_multiplier)::INTEGER AS total_item_def,
+                    ROUND(it.base_spd * r.stat_multiplier)::INTEGER AS total_item_spd,
+                    ROUND(it.base_crit_rate * r.stat_multiplier, 2)::FLOAT AS total_item_crit_rate,
+                    ROUND(it.base_crit_dmg * r.stat_multiplier, 2)::FLOAT AS total_item_crit_dmg,
+                    ROUND(it.base_eva * r.stat_multiplier, 2)::FLOAT AS total_item_eva,
+                    ROUND(it.base_lifesteal * r.stat_multiplier, 2)::FLOAT AS total_item_lifesteal
+                FROM selected_templates it
+                CROSS JOIN LATERAL (
+                    SELECT *
+                    FROM rarity
+                    ORDER BY (-LN(GREATEST(RANDOM(), 0.000001)) / NULLIF(weight + (it.item_template_id * 0), 0))
+                    LIMIT 1
+                ) r
+                ORDER BY r.rarity_id DESC, it.name;
+                """
+            )
+            return cur.fetchall()
 
 
 @app.post("/api/shop/buy/{run_id}")
@@ -707,22 +717,95 @@ def buy_shop_item(
             if not character:
                 raise HTTPException(status_code=404, detail="Active run not found")
 
-            cur.execute("SELECT * FROM game_runs WHERE run_id = %s", (run_id,))
-            run = cur.fetchone()
-            try:
-                purchase = purchase_shop_offer(
-                    cur,
-                    run,
-                    character,
+            cur.execute(
+                """
+                SELECT
+                    it.item_template_id,
+                    it.sell_amount,
+                    r.rarity_id,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * 2 * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS dynamic_gold_cost
+                FROM item_templates it
+                CROSS JOIN rarity r
+                WHERE it.item_template_id = %s
+                  AND r.rarity_id = %s
+                """,
+                (request.item_template_id, request.rarity_id),
+            )
+            purchasable_item = cur.fetchone()
+            if not purchasable_item:
+                raise HTTPException(status_code=404, detail="Shop item not found")
+
+            cost = purchasable_item["dynamic_gold_cost"]
+            if character["current_gold"] < cost:
+                raise HTTPException(status_code=400, detail="Not enough gold")
+
+            cur.execute(
+                """
+                UPDATE characters
+                SET current_gold = current_gold - %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE character_id = %s
+                  AND current_gold >= %s
+                """,
+                (cost, character["character_id"], cost),
+            )
+            if cur.rowcount != 1:
+                raise HTTPException(status_code=400, detail="Not enough gold")
+
+            cur.execute(
+                """
+                INSERT INTO inventory_items (
+                    character_id,
+                    item_template_id,
+                    rarity_id,
+                    item_level,
+                    item_effect,
+                    random_hp,
+                    random_atk,
+                    random_def,
+                    random_spd,
+                    random_crit_rate,
+                    random_crit_dmg,
+                    random_eva,
+                    random_lifesteal
+                )
+                SELECT
+                    %s,
+                    it.item_template_id,
+                    r.rarity_id,
+                    %s,
+                    'Purchased from merchant',
+                    ROUND(it.base_hp * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_atk * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_def * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_spd * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_crit_rate * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_crit_dmg * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_eva * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_lifesteal * (r.stat_multiplier - 1), 2)
+                FROM item_templates it
+                CROSS JOIN rarity r
+                WHERE it.item_template_id = %s
+                  AND r.rarity_id = %s
+                RETURNING inventory_item_id;
+                """,
+                (
+                    character["character_id"],
+                    character["level"],
                     request.item_template_id,
                     request.rarity_id,
-                    request.run_shop_offer_id,
-                )
-            except ValueError as exc:
-                status_code = 400 if str(exc) == "Not enough gold" else 404
-                raise HTTPException(status_code=status_code, detail=str(exc))
+                ),
+            )
+            inventory_item = cur.fetchone()
 
-            return {"message": "Item purchased", **purchase}
+            return {
+                "message": "Item purchased",
+                "inventory_item_id": inventory_item["inventory_item_id"],
+                "gold_spent": cost,
+            }
 
 
 @app.delete("/api/characters/{character_id}", status_code=status.HTTP_200_OK)

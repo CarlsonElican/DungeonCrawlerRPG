@@ -39,7 +39,7 @@ export function ShopPanel({ offers, onBuyItem, onLeaveShop }: ShopPanelProps) {
         <div className="sub-panel-grid">
           {offers.map((offer, index) => (
             <button
-              key={offer.run_shop_offer_id ?? `${offer.item_template_id}-${offer.rarity_id}-${index}`}
+              key={`${offer.item_template_id}-${offer.rarity_id}-${index}`}
               onClick={() => setSelectedOffer(offer)}
               className="sub-panel-card"
             >

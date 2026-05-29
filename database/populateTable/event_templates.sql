@@ -12,15 +12,4 @@ INSERT INTO event_templates (name, event_type, description) VALUES
     ('The Loot Protector', 'Combat', 'You spot a small pile of gold, but a fierce monster steps out to defend its hoard!'),
     ('Barricaded Room', 'Combat', 'You break through a rotten wooden door and surprise a hostile creature camping inside.'),
     ('Ominous Ritual', 'Combat', 'Chanting echoes through the halls. A figure turns to look at you, gathering dark magic in their hands!'),
-    ('The Dragon Lair', 'Combat', 'The floor burns with ash and soot. A massive silhouette moves in the shadows-Malakor awaits!'),
-    ('Boneguard Patrol', 'Combat', 'A shield-bearing skeleton patrols the corridor with patient discipline.'),
-    ('Corrosive Puddle', 'Combat', 'A hissing slime bubbles up from a cracked drain.'),
-    ('Knife in the Dark', 'Combat', 'A goblin cutthroat drops from a ledge with blades drawn.'),
-    ('Sickened Dead', 'Combat', 'A plague-ridden corpse lurches from a collapsed alcove.'),
-    ('Matriarch Roost', 'Combat', 'A larger bat circles above a nest of broken bones.'),
-    ('Broken Barricade', 'Combat', 'An orc smashes through a barricade and lowers a jagged axe.'),
-    ('Crystal Faultline', 'Combat', 'A glittering golem pulls itself free from the dungeon wall.'),
-    ('Void Study', 'Combat', 'A sorcerer closes a black tome and turns its empty gaze toward you.'),
-    ('Captain of Bones', 'Combat', 'A decorated skeleton captain blocks the stairs to the next floor.'),
-    ('The Warden Gate', 'Combat', 'Grumthar the Orc Warden waits behind an iron portcullis.'),
-    ('The Crystal Heart', 'Combat', 'Asterion the Crystal Golem awakens around a pulsing mineral core.');
+    ('The Dragon Lair', 'Combat', 'The floor burns with ash and soot. A massive silhouette moves in the shadows-Malakor awaits!');
