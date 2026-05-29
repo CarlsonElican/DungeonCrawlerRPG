@@ -93,7 +93,7 @@ def resolve_combat(
                     SET 
                         kills = kills + 1,
                         current_gold = current_gold + %s,
-                        current_hp = %s,
+                        current_hp = CASE WHEN %s THEN %s ELSE %s END,
                         level = CASE WHEN %s THEN level + 1 ELSE level END,
                         base_hp = CASE WHEN %s THEN base_hp + 15 ELSE base_hp END,
                         base_atk = CASE WHEN %s THEN base_atk + 3 ELSE base_atk END,
@@ -105,6 +105,8 @@ def resolve_combat(
                 """,
                     (
                         gold_earned,
+                        level_up_triggered,
+                        player["total_hp"] + 15,
                         battle_results["player_final_hp"],
                         level_up_triggered,
                         level_up_triggered,

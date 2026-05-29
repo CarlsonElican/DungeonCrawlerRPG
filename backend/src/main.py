@@ -9,7 +9,9 @@ from src.schemas import (
     EventCompletionRequest,
     InventoryItemResponse,
     EquipItemRequest,
+    InventoryItemActionRequest,
     ShopOfferResponse,
+    ShopPurchaseRequest,
     UserCreate,
     UserLogin,
     UserResponse,
@@ -415,16 +417,46 @@ def get_character_inventory(
                 SELECT 
                     ii.inventory_item_id,
                     it.name AS item_name,
+                    it.description,
                     it.item_type,
                     r.rarity_name,
                     r.hex_color,
                     ii.is_equipped,
+                    e.slot AS equipped_slot,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS sell_amount,
+                    ii.item_effect,
+                    it.base_hp AS base_item_hp,
+                    it.base_atk AS base_item_atk,
+                    it.base_def AS base_item_def,
+                    it.base_spd AS base_item_spd,
+                    it.base_crit_rate::FLOAT AS base_item_crit_rate,
+                    it.base_crit_dmg::FLOAT AS base_item_crit_dmg,
+                    it.base_eva::FLOAT AS base_item_eva,
+                    it.base_lifesteal::FLOAT AS base_item_lifesteal,
+                    ii.random_hp AS bonus_item_hp,
+                    ii.random_atk AS bonus_item_atk,
+                    ii.random_def AS bonus_item_def,
+                    ii.random_spd AS bonus_item_spd,
+                    ii.random_crit_rate::FLOAT AS bonus_item_crit_rate,
+                    ii.random_crit_dmg::FLOAT AS bonus_item_crit_dmg,
+                    ii.random_eva::FLOAT AS bonus_item_eva,
+                    ii.random_lifesteal::FLOAT AS bonus_item_lifesteal,
+                    (it.base_hp + ii.random_hp) AS total_item_hp,
                     (it.base_atk + ii.random_atk) AS total_item_atk,
-                    (it.base_def + ii.random_def) AS total_item_def
+                    (it.base_def + ii.random_def) AS total_item_def,
+                    (it.base_spd + ii.random_spd) AS total_item_spd,
+                    (it.base_crit_rate + ii.random_crit_rate)::FLOAT AS total_item_crit_rate,
+                    (it.base_crit_dmg + ii.random_crit_dmg)::FLOAT AS total_item_crit_dmg,
+                    (it.base_eva + ii.random_eva)::FLOAT AS total_item_eva,
+                    (it.base_lifesteal + ii.random_lifesteal)::FLOAT AS total_item_lifesteal
                 FROM inventory_items ii
                 JOIN item_templates it ON ii.item_template_id = it.item_template_id
                 JOIN rarity r ON ii.rarity_id = r.rarity_id
                 JOIN characters c ON ii.character_id = c.character_id
+                LEFT JOIN equipment e ON e.inventory_item_id = ii.inventory_item_id
                 WHERE ii.character_id = %s AND c.user_id = %s
                 ORDER BY ii.is_equipped DESC, r.rarity_id DESC;
                 """,
@@ -447,6 +479,25 @@ def equip_item(
             )
             if not cur.fetchone():
                 raise HTTPException(status_code=403, detail="Not authorized")
+
+            cur.execute(
+                """
+                SELECT it.item_type
+                FROM inventory_items ii
+                JOIN item_templates it ON ii.item_template_id = it.item_template_id
+                WHERE ii.inventory_item_id = %s
+                  AND ii.character_id = %s
+                """,
+                (request.inventory_item_id, character_id),
+            )
+            item = cur.fetchone()
+            if not item:
+                raise HTTPException(status_code=404, detail="Inventory item not found")
+            if item["item_type"] != request.slot:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{item['item_type']} items can only be equipped in the {item['item_type']} slot",
+                )
 
             cur.execute(
                 """
@@ -475,32 +526,286 @@ def equip_item(
             return {"message": f"Successfully equipped item to {request.slot}"}
 
 
-@app.get("/api/shop/offers/{run_id}")
-def get_shop_offers(run_id: int):
+@app.post("/api/inventory/unequip/{character_id}")
+def unequip_item(
+    character_id: int,
+    request: InventoryItemActionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT character_id FROM characters WHERE character_id = %s AND user_id = %s",
+                (character_id, current_user["user_id"]),
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=403, detail="Not authorized")
+
+            cur.execute(
+                """
+                DELETE FROM equipment
+                WHERE character_id = %s
+                  AND inventory_item_id = %s
+                """,
+                (character_id, request.inventory_item_id),
+            )
+
+            cur.execute(
+                """
+                UPDATE inventory_items
+                SET is_equipped = FALSE
+                WHERE character_id = %s
+                  AND inventory_item_id = %s
+                """,
+                (character_id, request.inventory_item_id),
+            )
+
+            return {"message": "Item unequipped"}
+
+
+@app.post("/api/inventory/sell/{character_id}")
+def sell_inventory_item(
+    character_id: int,
+    request: InventoryItemActionRequest,
+    current_user: dict = Depends(get_current_user),
+):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT 
-                    so.item_template_id, 
-                    it.name AS item_name, 
-                    it.item_type,
-                    r.rarity_name, 
-                    r.hex_color,
-                    ROUND(so.price * COALESCE(r.sell_price_multiplier, 1.0))::INTEGER AS dynamic_gold_cost
-                FROM shop_offer so
-                JOIN item_templates it ON so.item_template_id = it.item_template_id
-                JOIN rarity r ON so.rarity_id = r.rarity_id
-                WHERE so.day_number = (
-                    SELECT COALESCE(current_day, 1) 
-                    FROM game_runs 
-                    WHERE run_id = %s
-                );
-            """,
-                (run_id,),
+                SELECT
+                    ii.inventory_item_id,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS sell_amount
+                FROM inventory_items ii
+                JOIN item_templates it ON ii.item_template_id = it.item_template_id
+                JOIN rarity r ON ii.rarity_id = r.rarity_id
+                JOIN characters c ON ii.character_id = c.character_id
+                WHERE ii.inventory_item_id = %s
+                  AND ii.character_id = %s
+                  AND c.user_id = %s
+                """,
+                (request.inventory_item_id, character_id, current_user["user_id"]),
+            )
+            item = cur.fetchone()
+            if not item:
+                raise HTTPException(status_code=404, detail="Inventory item not found")
+
+            cur.execute(
+                "DELETE FROM equipment WHERE inventory_item_id = %s",
+                (request.inventory_item_id,),
+            )
+            cur.execute(
+                """
+                DELETE FROM inventory_items
+                WHERE inventory_item_id = %s
+                  AND character_id = %s
+                """,
+                (request.inventory_item_id, character_id),
+            )
+            cur.execute(
+                """
+                UPDATE characters
+                SET current_gold = current_gold + %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE character_id = %s
+                """,
+                (item["sell_amount"], character_id),
             )
 
+            return {"message": "Item sold", "gold_earned": item["sell_amount"]}
+
+
+@app.get("/api/shop/offers/{run_id}", response_model=List[ShopOfferResponse])
+def get_shop_offers(run_id: int, current_user: dict = Depends(get_current_user)):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT gr.run_id
+                FROM game_runs gr
+                JOIN characters c ON gr.character_id = c.character_id
+                WHERE gr.run_id = %s
+                  AND c.user_id = %s
+                  AND gr.ended_at IS NULL
+                """,
+                (run_id, current_user["user_id"]),
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Active run not found")
+
+            cur.execute(
+                """
+                WITH selected_templates AS (
+                    SELECT *
+                    FROM item_templates
+                    ORDER BY RANDOM()
+                    LIMIT 4
+                )
+                SELECT
+                    it.item_template_id,
+                    it.name AS item_name,
+                    it.description,
+                    it.item_type,
+                    r.rarity_id,
+                    r.rarity_name,
+                    r.hex_color,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * 2 * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS dynamic_gold_cost,
+                    NULL::TEXT AS item_effect,
+                    it.base_hp AS base_item_hp,
+                    it.base_atk AS base_item_atk,
+                    it.base_def AS base_item_def,
+                    it.base_spd AS base_item_spd,
+                    it.base_crit_rate::FLOAT AS base_item_crit_rate,
+                    it.base_crit_dmg::FLOAT AS base_item_crit_dmg,
+                    it.base_eva::FLOAT AS base_item_eva,
+                    it.base_lifesteal::FLOAT AS base_item_lifesteal,
+                    ROUND(it.base_hp * (r.stat_multiplier - 1))::INTEGER AS bonus_item_hp,
+                    ROUND(it.base_atk * (r.stat_multiplier - 1))::INTEGER AS bonus_item_atk,
+                    ROUND(it.base_def * (r.stat_multiplier - 1))::INTEGER AS bonus_item_def,
+                    ROUND(it.base_spd * (r.stat_multiplier - 1))::INTEGER AS bonus_item_spd,
+                    ROUND(it.base_crit_rate * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_rate,
+                    ROUND(it.base_crit_dmg * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_dmg,
+                    ROUND(it.base_eva * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_eva,
+                    ROUND(it.base_lifesteal * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_lifesteal,
+                    ROUND(it.base_hp * r.stat_multiplier)::INTEGER AS total_item_hp,
+                    ROUND(it.base_atk * r.stat_multiplier)::INTEGER AS total_item_atk,
+                    ROUND(it.base_def * r.stat_multiplier)::INTEGER AS total_item_def,
+                    ROUND(it.base_spd * r.stat_multiplier)::INTEGER AS total_item_spd,
+                    ROUND(it.base_crit_rate * r.stat_multiplier, 2)::FLOAT AS total_item_crit_rate,
+                    ROUND(it.base_crit_dmg * r.stat_multiplier, 2)::FLOAT AS total_item_crit_dmg,
+                    ROUND(it.base_eva * r.stat_multiplier, 2)::FLOAT AS total_item_eva,
+                    ROUND(it.base_lifesteal * r.stat_multiplier, 2)::FLOAT AS total_item_lifesteal
+                FROM selected_templates it
+                CROSS JOIN LATERAL (
+                    SELECT *
+                    FROM rarity
+                    ORDER BY (-LN(GREATEST(RANDOM(), 0.000001)) / NULLIF(weight + (it.item_template_id * 0), 0))
+                    LIMIT 1
+                ) r
+                ORDER BY r.rarity_id DESC, it.name;
+                """
+            )
             return cur.fetchall()
+
+
+@app.post("/api/shop/buy/{run_id}")
+def buy_shop_item(
+    run_id: int,
+    request: ShopPurchaseRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.character_id, c.current_gold, c.level
+                FROM game_runs gr
+                JOIN characters c ON gr.character_id = c.character_id
+                WHERE gr.run_id = %s
+                  AND c.user_id = %s
+                  AND gr.ended_at IS NULL
+                """,
+                (run_id, current_user["user_id"]),
+            )
+            character = cur.fetchone()
+            if not character:
+                raise HTTPException(status_code=404, detail="Active run not found")
+
+            cur.execute(
+                """
+                SELECT
+                    it.item_template_id,
+                    it.sell_amount,
+                    r.rarity_id,
+                    GREATEST(
+                        1,
+                        ROUND(COALESCE(it.sell_amount, 1) * 2 * COALESCE(r.sell_price_multiplier, 1.0))
+                    )::INTEGER AS dynamic_gold_cost
+                FROM item_templates it
+                CROSS JOIN rarity r
+                WHERE it.item_template_id = %s
+                  AND r.rarity_id = %s
+                """,
+                (request.item_template_id, request.rarity_id),
+            )
+            purchasable_item = cur.fetchone()
+            if not purchasable_item:
+                raise HTTPException(status_code=404, detail="Shop item not found")
+
+            cost = purchasable_item["dynamic_gold_cost"]
+            if character["current_gold"] < cost:
+                raise HTTPException(status_code=400, detail="Not enough gold")
+
+            cur.execute(
+                """
+                UPDATE characters
+                SET current_gold = current_gold - %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE character_id = %s
+                  AND current_gold >= %s
+                """,
+                (cost, character["character_id"], cost),
+            )
+            if cur.rowcount != 1:
+                raise HTTPException(status_code=400, detail="Not enough gold")
+
+            cur.execute(
+                """
+                INSERT INTO inventory_items (
+                    character_id,
+                    item_template_id,
+                    rarity_id,
+                    item_level,
+                    item_effect,
+                    random_hp,
+                    random_atk,
+                    random_def,
+                    random_spd,
+                    random_crit_rate,
+                    random_crit_dmg,
+                    random_eva,
+                    random_lifesteal
+                )
+                SELECT
+                    %s,
+                    it.item_template_id,
+                    r.rarity_id,
+                    %s,
+                    'Purchased from merchant',
+                    ROUND(it.base_hp * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_atk * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_def * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_spd * (r.stat_multiplier - 1))::INTEGER,
+                    ROUND(it.base_crit_rate * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_crit_dmg * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_eva * (r.stat_multiplier - 1), 2),
+                    ROUND(it.base_lifesteal * (r.stat_multiplier - 1), 2)
+                FROM item_templates it
+                CROSS JOIN rarity r
+                WHERE it.item_template_id = %s
+                  AND r.rarity_id = %s
+                RETURNING inventory_item_id;
+                """,
+                (
+                    character["character_id"],
+                    character["level"],
+                    request.item_template_id,
+                    request.rarity_id,
+                ),
+            )
+            inventory_item = cur.fetchone()
+
+            return {
+                "message": "Item purchased",
+                "inventory_item_id": inventory_item["inventory_item_id"],
+                "gold_spent": cost,
+            }
 
 
 @app.delete("/api/characters/{character_id}", status_code=status.HTTP_200_OK)
