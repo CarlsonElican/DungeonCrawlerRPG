@@ -355,19 +355,21 @@
   box-sizing: border-box;
 
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 20px;
-  overflow: hidden;
+  padding: 24px;
+  overflow: auto;
 }
 
 .game-main-grid {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1680px;
   display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 32px;
+  grid-template-columns: minmax(260px, 320px) minmax(560px, 1fr) minmax(280px, 360px);
+  gap: 20px;
   box-sizing: border-box;
+  align-items: stretch;
+  min-height: calc(100vh - 48px);
 }
 
 .game-sidebar-panel {
@@ -376,8 +378,9 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   text-align: left;
-  align-self: start;
+  align-self: stretch;
   box-shadow: var(--shadow);
+  overflow-y: auto;
 }
 
 .sidebar-profile-header {
@@ -478,11 +481,12 @@
 .interactive-screen-panel {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  min-width: 0;
 }
 
 .terminal-scroll-log {
-  height: 220px;
+  height: 100%;
+  min-height: 0;
   overflow-y: auto;
   background-color: var(--code-bg);
   border: 1px solid var(--border);
@@ -497,8 +501,12 @@
   gap: 6px;
 }
 
+.game-log-panel {
+  min-height: 0;
+}
+
 .dynamic-panel-container {
-  min-height: 340px;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -538,6 +546,8 @@
 }
 
 .sub-panel-ui {
+  width: 100%;
+  box-sizing: border-box;
   padding: 24px;
   background-color: var(--code-bg);
   border: 1px solid var(--border);
@@ -557,7 +567,7 @@
 
 .sub-panel-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -698,4 +708,376 @@
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.level-up-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.62);
+}
+
+.level-up-modal {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background-color: var(--code-bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+  text-align: center;
+}
+
+.level-up-modal-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+  background-color: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 12px;
+}
+
+.level-up-modal-title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.level-up-modal-subtitle {
+  margin: 6px 0 22px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.level-up-stat-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.level-up-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.level-up-stat-row.is-improved {
+  border-color: rgba(16, 185, 129, 0.45);
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.level-up-stat-label {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.level-up-stat-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-h);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.level-up-stat-values strong {
+  color: #10b981;
+}
+
+.level-up-stat-arrow {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.level-up-modal-btn {
+  margin-bottom: 0;
+}
+
+.shop-item-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.58);
+}
+
+.shop-item-modal {
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  text-align: left;
+}
+
+.shop-item-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.shop-item-modal-kicker {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.shop-item-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.shop-item-icon-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--text-h);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.shop-item-modal-desc {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.shop-item-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.shop-item-stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.shop-item-stat-row strong {
+  color: var(--text-h);
+}
+
+.shop-item-bonus-stat {
+  font-weight: 900;
+}
+
+.shop-item-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.shop-item-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.shop-item-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.shop-item-buy-btn {
+  width: auto;
+  min-width: 120px;
+  margin-bottom: 0;
+  padding: 10px 18px;
+}
+
+.equipment-workspace {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.equipment-slot-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.inventory-workspace {
+  min-width: 0;
+}
+
+.inventory-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.inventory-tab {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.inventory-tab.is-active {
+  color: var(--bg);
+  background-color: var(--text-h);
+  border-color: var(--text-h);
+}
+
+.equipment-slot-card {
+  min-height: 66px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 6px;
+  background-color: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: default;
+  text-align: left;
+}
+
+.equipment-slot-card.is-filled {
+  border-style: solid;
+  cursor: pointer;
+}
+
+.equipment-slot-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.equipment-slot-item {
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.inventory-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--text-h);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.inventory-danger-btn {
+  width: auto;
+  min-width: 84px;
+  margin-bottom: 0;
+  padding: 10px 16px;
+}
+
+@media (max-width: 1024px) {
+  .game-world-layout {
+    height: auto;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .game-main-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .game-sidebar-panel,
+  .terminal-scroll-log {
+    max-height: none;
+  }
+
+  .terminal-scroll-log {
+    height: 220px;
+  }
+
+  .equipment-workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-slot-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shop-item-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shop-item-actions {
+    flex-wrap: wrap;
+  }
 }

@@ -28,6 +28,7 @@ class CharacterResponse(CharacterBase):
     kills: int
     deaths: int
     current_gold: int
+    current_hp: int
     highest_floor_reached: int
     total_hp: int
     total_atk: int
@@ -61,13 +62,38 @@ class EventCompletionRequest(BaseModel):
 class InventoryItemResponse(BaseModel):
     inventory_item_id: int
     item_name: str
+    description: Optional[str]
     item_type: str
     rarity_name: str
     hex_color: str
     is_equipped: bool
+    equipped_slot: Optional[str]
+    sell_amount: int
+    item_effect: Optional[str]
+    base_item_hp: int
+    base_item_atk: int
+    base_item_def: int
+    base_item_spd: int
+    base_item_crit_rate: float
+    base_item_crit_dmg: float
+    base_item_eva: float
+    base_item_lifesteal: float
+    bonus_item_hp: int
+    bonus_item_atk: int
+    bonus_item_def: int
+    bonus_item_spd: int
+    bonus_item_crit_rate: float
+    bonus_item_crit_dmg: float
+    bonus_item_eva: float
+    bonus_item_lifesteal: float
+    total_item_hp: int
     total_item_atk: int
     total_item_def: int
-    item_effect: Optional[str]
+    total_item_spd: int
+    total_item_crit_rate: float
+    total_item_crit_dmg: float
+    total_item_eva: float
+    total_item_lifesteal: float
 
 
 class EquipItemRequest(BaseModel):
@@ -75,15 +101,49 @@ class EquipItemRequest(BaseModel):
     slot: str
 
 
+class InventoryItemActionRequest(BaseModel):
+    inventory_item_id: int
+
+
 class ShopOfferResponse(BaseModel):
     item_template_id: int
     item_name: str
+    description: Optional[str]
     item_type: str
     rarity_id: int
     rarity_name: str
     hex_color: str
     dynamic_gold_cost: int
     item_effect: Optional[str]
+    base_item_hp: int
+    base_item_atk: int
+    base_item_def: int
+    base_item_spd: int
+    base_item_crit_rate: float
+    base_item_crit_dmg: float
+    base_item_eva: float
+    base_item_lifesteal: float
+    bonus_item_hp: int
+    bonus_item_atk: int
+    bonus_item_def: int
+    bonus_item_spd: int
+    bonus_item_crit_rate: float
+    bonus_item_crit_dmg: float
+    bonus_item_eva: float
+    bonus_item_lifesteal: float
+    total_item_hp: int
+    total_item_atk: int
+    total_item_def: int
+    total_item_spd: int
+    total_item_crit_rate: float
+    total_item_crit_dmg: float
+    total_item_eva: float
+    total_item_lifesteal: float
+
+
+class ShopPurchaseRequest(BaseModel):
+    item_template_id: int
+    rarity_id: int
 
 
 class EventTemplateResponse(BaseModel):
