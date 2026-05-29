@@ -59,6 +59,12 @@ class EventCompletionRequest(BaseModel):
     event_result_id: int
 
 
+class EventCompletionResponse(BaseModel):
+    message: str
+    run: GameRunResponse
+    character: CharacterResponse
+
+
 class InventoryItemResponse(BaseModel):
     inventory_item_id: int
     item_name: str
@@ -67,6 +73,7 @@ class InventoryItemResponse(BaseModel):
     rarity_name: str
     hex_color: str
     is_equipped: bool
+    upgraded_level: int
     equipped_slot: Optional[str]
     sell_amount: int
     item_effect: Optional[str]
@@ -106,6 +113,7 @@ class InventoryItemActionRequest(BaseModel):
 
 
 class ShopOfferResponse(BaseModel):
+    run_shop_offer_id: Optional[int] = None
     item_template_id: int
     item_name: str
     description: Optional[str]
@@ -142,8 +150,17 @@ class ShopOfferResponse(BaseModel):
 
 
 class ShopPurchaseRequest(BaseModel):
-    item_template_id: int
-    rarity_id: int
+    item_template_id: Optional[int] = None
+    rarity_id: Optional[int] = None
+    run_shop_offer_id: Optional[int] = None
+
+
+class UpgradeItemResponse(BaseModel):
+    message: str
+    inventory_item_id: int
+    upgraded_level: int
+    gold_spent: int
+    character: CharacterResponse
 
 
 class EventTemplateResponse(BaseModel):
@@ -199,3 +216,5 @@ class CombatResponse(BaseModel):
     exp_earned: int
     level_up_triggered: bool
     combat_log: List[str]
+    run: Optional[GameRunResponse] = None
+    character: Optional[CharacterResponse] = None

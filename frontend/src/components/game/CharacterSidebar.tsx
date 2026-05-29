@@ -93,6 +93,13 @@ export function CharacterSidebar({
           <div className="sidebar-run-tracker">
             <p className="sidebar-run-row"><span>Current Floor:</span> <strong className="sidebar-run-value">{activeRun.current_floor}</strong></p>
             <p className="sidebar-run-row"><span>Room Matrix Index:</span> <strong className="sidebar-run-value">{activeRun.current_room}</strong></p>
+            <p className="sidebar-run-row"><span>Rooms Cleared:</span> <strong className="sidebar-run-value">{activeRun.events_completed} / {activeRun.events_required}</strong></p>
+            <p className="sidebar-run-row">
+              <span>Boss Gate:</span>
+              <strong className="sidebar-run-value" style={{ color: activeRun.boss_unlocked ? '#ef4444' : undefined }}>
+                {activeRun.boss_unlocked ? 'Open' : 'Sealed'}
+              </strong>
+            </p>
           </div>
         ) : (
           <p style={{ fontSize: '0.85rem', color: '#4b5563', margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No active progression data.</p>
