@@ -1,8 +1,13 @@
 CREATE DATABASE rpg_game;
 
 DROP TABLE IF EXISTS run_events CASCADE;
+DROP TABLE IF EXISTS event_template_results CASCADE;
+DROP TABLE IF EXISTS event_template_enemies CASCADE;
 DROP TABLE IF EXISTS event_results CASCADE;
 DROP TABLE IF EXISTS event_templates CASCADE;
+DROP TABLE IF EXISTS run_shop_offers CASCADE;
+DROP TABLE IF EXISTS floor_rewards CASCADE;
+DROP TABLE IF EXISTS upgrade_rules CASCADE;
 DROP TABLE IF EXISTS game_runs CASCADE;
 DROP TABLE IF EXISTS shop_offer CASCADE;
 DROP TABLE IF EXISTS loot_table CASCADE;
@@ -148,6 +153,32 @@ CREATE TABLE game_runs (
     ended_at TIMESTAMP
 );
 
+CREATE TABLE run_shop_offers (
+    run_shop_offer_id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL REFERENCES game_runs(run_id) ON DELETE CASCADE,
+    floor_number INT NOT NULL,
+    room_number INT NOT NULL,
+    item_template_id INT NOT NULL REFERENCES item_templates(item_template_id),
+    rarity_id INT NOT NULL REFERENCES rarity(rarity_id),
+    price INT NOT NULL,
+    purchased_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE floor_rewards (
+    floor_reward_id SERIAL PRIMARY KEY,
+    floor_number INT NOT NULL UNIQUE,
+    gold_reward INT NOT NULL DEFAULT 0,
+    exp_reward INT NOT NULL DEFAULT 0,
+    guaranteed_min_rarity_id INT REFERENCES rarity(rarity_id)
+);
+
+CREATE TABLE upgrade_rules (
+    upgrade_level INT PRIMARY KEY,
+    gold_cost_multiplier NUMERIC(6,2) NOT NULL,
+    stat_multiplier NUMERIC(6,2) NOT NULL
+);
+
 CREATE TABLE event_templates (
     event_template_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -162,6 +193,26 @@ CREATE TABLE event_results (
     hp_change INT DEFAULT 0,
     exp_change INT DEFAULT 0,
     notes TEXT
+);
+
+CREATE TABLE event_template_results (
+    event_template_result_id SERIAL PRIMARY KEY,
+    event_template_id INT NOT NULL REFERENCES event_templates(event_template_id) ON DELETE CASCADE,
+    event_result_id INT NOT NULL REFERENCES event_results(event_result_id) ON DELETE CASCADE,
+    weight NUMERIC(5,2) NOT NULL DEFAULT 1.00,
+    min_floor INT DEFAULT 1,
+    max_floor INT,
+    UNIQUE (event_template_id, event_result_id)
+);
+
+CREATE TABLE event_template_enemies (
+    event_template_enemy_id SERIAL PRIMARY KEY,
+    event_template_id INT NOT NULL REFERENCES event_templates(event_template_id) ON DELETE CASCADE,
+    enemy_id INT NOT NULL REFERENCES enemies(enemy_id) ON DELETE CASCADE,
+    weight NUMERIC(5,2) NOT NULL DEFAULT 1.00,
+    min_floor INT DEFAULT 1,
+    max_floor INT,
+    UNIQUE (event_template_id, enemy_id)
 );
 
 CREATE TABLE run_events (

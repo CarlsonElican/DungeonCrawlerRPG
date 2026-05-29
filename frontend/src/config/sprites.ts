@@ -1,6 +1,19 @@
 // src/config/enemySprites.ts
 
 export const ENEMY_SPRITES: Record<string, string> = {
+    "Grimjaw": "Captain_Skeleton.png",
+    "Skeleton Captain": "Captain_Skeleton.png",
+    "Grumthar": "Orc_Warden.png",
+    "Orc Warden": "Orc_Warden.png",
+    "Asterion": "Crystaline_Golem.png",
+    "Crystal Golem": "Crystal_Golem.png",
+    "Boneguard": "Boneguard_Skeleton.png",
+    "Acid Slime": "Acid_Slime.png",
+    "Goblin Cutthroat": "Goblin_Cutthroat.png",
+    "Plague Zombie": "Plague_Zombie.png",
+    "Cave Bat Matriarch": "Cave_Bat_Matriarch.png",
+    "Orc Shieldbreaker": "Orc_Shieldbreaker.png",
+    "Void Sorcerer": "Void_Sorcerer.png",
     "Bat": "Bat.png",
     "Dragon": "Dragon.png",
     "Goblin": "Goblin.png",

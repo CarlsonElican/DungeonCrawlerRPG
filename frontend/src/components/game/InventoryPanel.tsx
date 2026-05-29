@@ -130,7 +130,9 @@ export function InventoryPanel({
                   style={{ border: item.is_equipped ? '1px solid #10b981' : '1px solid var(--border)' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '10px' }}>
-                    <span style={{ color: item.hex_color, fontWeight: '700' }}>[{item.rarity_name}] {item.item_name}</span>
+                    <span style={{ color: item.hex_color, fontWeight: '700' }}>
+                      [{item.rarity_name}] {item.item_name}{item.upgraded_level > 0 ? ` +${item.upgraded_level}` : ''}
+                    </span>
                     {item.is_equipped && <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: '800', backgroundColor: '#142f26', padding: '2px 6px', borderRadius: '4px' }}>EQUIPPED</span>}
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text)', marginTop: '4px' }}>{item.item_type}</div>
@@ -174,7 +176,7 @@ function InventoryItemModal({ item, onClose, onEquipToggle, onSell, onUpgrade }:
           <div>
             <p className="shop-item-modal-kicker">{item.item_type}{item.equipped_slot ? ` Slot: ${item.equipped_slot}` : ''}</p>
             <h3 id="inventory-item-title" className="shop-item-modal-title" style={{ color: item.hex_color }}>
-              [{item.rarity_name}] {item.item_name}
+              [{item.rarity_name}] {item.item_name}{item.upgraded_level > 0 ? ` +${item.upgraded_level}` : ''}
             </h3>
           </div>
           <button onClick={onClose} className="shop-item-icon-btn" aria-label="Close item details">
