@@ -257,7 +257,7 @@ function Game({ currentUser, onLogout }: GameProps) {
       setInventoryItems(response.data);
       setIsInInventory(true);
       setIsInShop(false);
-      addLog("Opening your adventurer knapsack...");
+      addLog("Opening your adventurer backpack...");
     } catch {
       addLog("Failed to look into your backpack right now.");
     } finally {
