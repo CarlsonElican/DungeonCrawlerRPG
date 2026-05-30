@@ -1,6 +1,13 @@
 import type { FormEvent, MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { LogOut, Trash2, UserCheck, UserPlus } from 'lucide-react';
+import { api } from '../../api';
 import type { Character, StarterStatAllocation, StarterStatKey } from '../../types/game';
+
+interface SkillTemplate {
+  name: string;
+  description: string;
+}
 
 interface CharacterGateProps {
   characters: Character[];
@@ -20,8 +27,6 @@ interface CharacterGateProps {
   onSetStarterStatAllocation: (allocation: StarterStatAllocation) => void;
 }
 
-const STARTER_SKILLS = ['Strike', 'Guard', 'Quickstep', 'First Aid'];
-
 const STAT_ROWS: Array<{
   key: StarterStatKey;
   label: string;
@@ -29,15 +34,15 @@ const STAT_ROWS: Array<{
   gain: string;
   getValue: (points: number) => string;
 }> = [
-  { key: 'hp', label: 'Health', base: '50', gain: '+10 HP', getValue: points => `${50 + (points * 10)}` },
-  { key: 'atk', label: 'Attack', base: '10', gain: '+1 ATK', getValue: points => `${10 + points}` },
-  { key: 'def', label: 'Defense', base: '10', gain: '+1 DEF', getValue: points => `${10 + points}` },
-  { key: 'spd', label: 'Speed', base: '50', gain: '+10 SPD', getValue: points => `${50 + (points * 10)}` },
-  { key: 'critRate', label: 'Crit Rate', base: '5%', gain: '+1%', getValue: points => `${5 + points}%` },
-  { key: 'eva', label: 'Evasion', base: '5%', gain: '+1%', getValue: points => `${5 + points}%` },
-  { key: 'critDmg', label: 'Crit Damage', base: '1.50x', gain: '+0.10x', getValue: points => `${(1.5 + (points * 0.1)).toFixed(2)}x` },
-  { key: 'lifesteal', label: 'Lifesteal', base: '0%', gain: '+1%', getValue: points => `${points}%` },
-];
+    { key: 'hp', label: 'Health', base: '50', gain: '+10 HP', getValue: points => `${50 + (points * 10)}` },
+    { key: 'atk', label: 'Attack', base: '10', gain: '+1 ATK', getValue: points => `${10 + points}` },
+    { key: 'def', label: 'Defense', base: '10', gain: '+1 DEF', getValue: points => `${10 + points}` },
+    { key: 'spd', label: 'Speed', base: '50', gain: '+10 SPD', getValue: points => `${50 + (points * 10)}` },
+    { key: 'critRate', label: 'Crit Rate', base: '5%', gain: '+1%', getValue: points => `${5 + points}%` },
+    { key: 'eva', label: 'Evasion', base: '5%', gain: '+1%', getValue: points => `${5 + points}%` },
+    { key: 'critDmg', label: 'Crit Damage', base: '1.50x', gain: '+0.10x', getValue: points => `${(1.5 + (points * 0.1)).toFixed(2)}x` },
+    { key: 'lifesteal', label: 'Lifesteal', base: '0%', gain: '+1%', getValue: points => `${points}%` },
+  ];
 
 export function CharacterGate({
   characters,
@@ -56,8 +61,36 @@ export function CharacterGate({
   onSetStarterSkill,
   onSetStarterStatAllocation,
 }: CharacterGateProps) {
+  const [availableSkills, setAvailableSkills] = useState<SkillTemplate[]>([]);
+
+  useEffect(() => {
+    if (isCreating) {
+      api.get<SkillTemplate[]>('/skills/templates')
+        .then((response) => {
+          const data = response.data;
+          setAvailableSkills(data);
+
+          if (data.length > 0 && !starterSkill) {
+            onSetStarterSkill(data[0].name);
+          }
+        })
+        .catch((err) => console.error("Failed to load skills via Axios client:", err));
+    }
+  }, [isCreating]);
+
   const spentPoints = Object.values(starterStatAllocation).reduce((total, points) => total + points, 0);
   const remainingPoints = starterStatPoints - spentPoints;
+
+  const handleSubmitValidation = (event: FormEvent) => {
+    event.preventDefault();
+
+    if (remainingPoints !== 0) {
+      alert(`🚨 Character Creation Halted!\n\nYou must distribute all ${starterStatPoints} stat points. You currently have ${remainingPoints} unspent points remaining.`);
+      return;
+    }
+
+    onCreateCharacter(event);
+  };
 
   const updateStat = (stat: StarterStatKey, direction: 1 | -1) => {
     const currentValue = starterStatAllocation[stat];
@@ -70,14 +103,16 @@ export function CharacterGate({
     });
   };
 
+  const selectedSkillDetails = availableSkills.find(s => s.name === starterSkill);
+
   return (
     <div className="auth-screen-wrapper">
-      <div className="auth-card">
+      <div className="auth-card" style={{ maxWidth: isCreating ? '540px' : '440px', transition: 'max-width 0.2s' }}>
         {isCreating ? (
           <div>
             <h2 className="auth-title">Forge Your Hero</h2>
             <p className="auth-subtitle">Distribute {starterStatPoints} points, then choose a starter skill.</p>
-            <form onSubmit={onCreateCharacter}>
+            <form onSubmit={handleSubmitValidation}>
               <div className="form-group">
                 <label htmlFor="charName" className="form-label">Character Name</label>
                 <input
@@ -94,7 +129,9 @@ export function CharacterGate({
               <div className="starter-builder">
                 <div className="starter-builder-header">
                   <span>Stat Points</span>
-                  <strong>{remainingPoints} Remaining</strong>
+                  <strong style={{ color: remainingPoints > 0 ? '#eab308' : '#22c55e' }}>
+                    {remainingPoints} Remaining
+                  </strong>
                 </div>
 
                 <div className="starter-stat-list">
@@ -115,21 +152,59 @@ export function CharacterGate({
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="starterSkill" className="form-label">Starter Skill</label>
+              <div className="form-group" style={{ marginTop: '20px' }}>
+                <label htmlFor="starterSkillSelect" className="form-label">Starter Ability</label>
                 <select
-                  id="starterSkill"
+                  id="starterSkillSelect"
                   value={starterSkill}
-                  onChange={event => onSetStarterSkill(event.target.value)}
+                  onChange={(event) => onSetStarterSkill(event.target.value)}
                   className="form-input"
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    backgroundColor: '#111827',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#f3f4f6',
+                    cursor: 'pointer',
+                    padding: '10px 12px'
+                  }}
                 >
-                  {STARTER_SKILLS.map(skill => (
-                    <option key={skill} value={skill}>{skill}</option>
+                  {availableSkills.map(skill => (
+                    <option key={skill.name} value={skill.name} style={{ backgroundColor: '#111827', color: '#f3f4f6' }}>
+                      {skill.name}
+                    </option>
                   ))}
                 </select>
+
+                <div style={{
+                  marginTop: '8px',
+                  padding: '10px 12px',
+                  backgroundColor: '#1e293b',
+                  borderRadius: '6px',
+                  borderLeft: '3px solid #3b82f6',
+                  fontSize: '12px',
+                  color: '#9ca3af',
+                  lineHeight: '1.4',
+                  height: '54px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {selectedSkillDetails ? selectedSkillDetails.description : "Select an ability to view its details."}
+                </div>
               </div>
 
-              <button type="submit" disabled={loading || !newName.trim() || remainingPoints !== 0} className="btn-primary">
+              <button
+                type="submit"
+                disabled={loading || !newName.trim()}
+                className="btn-primary"
+                style={{
+                  marginTop: '16px',
+                  opacity: remainingPoints !== 0 ? 0.6 : 1,
+                  filter: remainingPoints !== 0 ? 'grayscale(30%)' : 'none'
+                }}
+              >
                 {loading ? "Initializing..." : "Create Character"}
               </button>
               <button type="button" onClick={() => onSetCreating(false)} className="btn-secondary">

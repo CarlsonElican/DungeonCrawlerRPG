@@ -179,6 +179,8 @@ function Game({ onLogout }: GameProps) {
 
   const selectCharacter = async (character: Character) => {
     setLoading(true);
+    resetEncounterState();
+    setActiveRun(null);
 
     try {
       const freshCharacter = await fetchCharacterById(character.character_id);
@@ -228,7 +230,8 @@ function Game({ onLogout }: GameProps) {
       setIsCreating(false);
       setSelectedChar(response.data);
       setNewName("");
-      setStarterSkill("Strike");
+
+      setStarterSkill("");
       setStarterStatAllocation(INITIAL_STARTER_ALLOCATIONS);
     } catch {
       addLog("Failed to create character. Check backend logs.");
@@ -562,7 +565,15 @@ function Game({ onLogout }: GameProps) {
           character={selectedChar}
           combatResult={combatResult}
           simulatedPlayerHp={simPlayerHp}
-          onBackToSelection={() => setSelectedChar(null)}
+          onBackToSelection={() => {
+            setIsInShop(false);
+            setIsInInventory(false);
+            setShopOffers([]);
+            setInventoryItems([]);
+            setSelectedChar(null);
+            setActiveRun(null);
+            resetEncounterState();
+          }}
         />
 
         <div className="interactive-screen-panel">
@@ -587,12 +598,13 @@ function Game({ onLogout }: GameProps) {
 
   function renderActivePanel(character: Character) {
     if (isInShop) {
-      return <ShopPanel offers={shopOffers} onBuyItem={buyItem} onLeaveShop={closeShop} />;
+      return <ShopPanel key={`shop-run-${activeRun?.run_id}`} offers={shopOffers} onBuyItem={buyItem} onLeaveShop={closeShop} />;
     }
 
     if (isInInventory) {
       return (
         <InventoryPanel
+          key={`inv-char-${character.character_id}`}
           items={inventoryItems}
           onCloseInventory={closeInventory}
           onEquipItem={equipItem}

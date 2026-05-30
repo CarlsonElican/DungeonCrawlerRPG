@@ -233,3 +233,15 @@ CREATE TABLE run_events (
     sequence_number INT,
     occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE skill_templates (
+    skill_template_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE character_skills (
+    character_id INT NOT NULL REFERENCES characters(character_id) ON DELETE CASCADE,
+    skill_template_id INT NOT NULL REFERENCES skill_templates(skill_template_id) ON DELETE CASCADE,
+    PRIMARY KEY (character_id, skill_template_id)
+);
