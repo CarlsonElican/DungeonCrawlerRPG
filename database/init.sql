@@ -95,7 +95,15 @@ CREATE TABLE inventory_items (
     random_crit_rate NUMERIC(5,2) DEFAULT 0,
     random_crit_dmg NUMERIC(5,2) DEFAULT 0,
     random_eva NUMERIC(5,2) DEFAULT 0,
-    random_lifesteal NUMERIC(5,2) DEFAULT 0
+    random_lifesteal NUMERIC(5,2) DEFAULT 0,
+    upgrade_hp INT DEFAULT 0,
+    upgrade_atk INT DEFAULT 0,
+    upgrade_def INT DEFAULT 0,
+    upgrade_spd INT DEFAULT 0,
+    upgrade_crit_rate NUMERIC(5,2) DEFAULT 0,
+    upgrade_crit_dmg NUMERIC(5,2) DEFAULT 0,
+    upgrade_eva NUMERIC(5,2) DEFAULT 0,
+    upgrade_lifesteal NUMERIC(5,2) DEFAULT 0
 );
 
 CREATE TABLE equipment (

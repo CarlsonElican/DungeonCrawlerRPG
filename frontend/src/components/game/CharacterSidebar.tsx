@@ -1,4 +1,4 @@
-import { ArrowLeft, Coins, Heart, Shield, Sparkle, Sparkles, Swords, Zap, Rabbit } from 'lucide-react';
+import { ArrowLeft, Coins, Heart, Shield, Sparkle, Sparkles, Swords, Zap, Rabbit, WandSparkles } from 'lucide-react';
 import type { Character, CombatResult, GameRun } from '../../types/game';
 
 interface CharacterSidebarProps {
@@ -52,6 +52,10 @@ export function CharacterSidebar({
           <div className="sidebar-vital-row">
             <span className="sidebar-vital-label"><Coins size={16} color="#fbbf24" fill="#fbbf24" /> Gold Wealth</span>
             <span className="sidebar-vital-value" style={{ color: '#fbbf24' }}>{character.current_gold}</span>
+          </div>
+          <div className="sidebar-vital-row">
+            <span className="sidebar-vital-label"><WandSparkles size={16} color="var(--accent)" /> Skill</span>
+            <span className="sidebar-vital-value">{character.starter_skill || 'None'}</span>
           </div>
         </div>
 
