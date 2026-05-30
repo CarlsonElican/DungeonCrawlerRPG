@@ -6,6 +6,8 @@ from src.schemas import CombatInitiativeRequest, CombatResponse
 from src.services.characters import fetch_character_sheet
 from src.services.combat import simulate_autobattle
 from src.services.events import fetch_enemy_for_event
+from src.services.items import insert_inventory_item
+from src.services.loot import calculate_monster_drop
 from src.services.progression import (
     advance_floor_after_boss,
     advance_room_or_unlock_boss,
@@ -100,6 +102,28 @@ def resolve_combat(
             if battle_results["victory"]:
                 gold_earned = enemy["base_golddrop"]
                 exp_earned = enemy["base_expdrop"]
+
+                drop_roll = calculate_monster_drop(
+                    cur, enemy["enemy_id"], enemy["type"]
+                )
+                if drop_roll:
+                    insert_inventory_item(
+                        cur=cur,
+                        character_id=character_id,
+                        item_template_id=drop_roll["item_template_id"],
+                        rarity_id=drop_roll["rarity_id"],
+                        item_level=enemy["level"],
+                        item_effect="Snatched from a fallen foe",
+                    )
+
+                    cur.execute(
+                        "SELECT name FROM item_templates WHERE item_template_id = %s",
+                        (drop_roll["item_template_id"],),
+                    )
+                    item_data = cur.fetchone()
+                    battle_results["log"].append(
+                        f"🎁 Drop Triggered! You salvaged: {item_data['name']} from the corpse."
+                    )
 
                 current_level = player["level"]
                 current_exp = player["experience"] + exp_earned

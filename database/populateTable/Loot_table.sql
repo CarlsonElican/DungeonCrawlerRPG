@@ -1,100 +1,112 @@
 INSERT INTO loot_table (enemy_id, item_template_id, weight)
 VALUES
-    -- Frail Skeleton (ID 1) Drops
-    (1, 1, 70.00), -- Frail Skeleton -> Rusty Sword
-    (1, 5, 40.00), -- Frail Skeleton -> Battered Wooden Shield
-    (1, 8, 30.00), -- Frail Skeleton -> Ragged Hood
+    -- ==========================================
+    -- EARLY GAME MONSTERS
+    -- ==========================================
+    -- Frail Skeleton
+    ((SELECT enemy_id FROM enemies WHERE name = 'Frail Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Rusty Sword'), 70.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Frail Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Battered Wooden Shield'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Frail Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Ragged Hood'), 30.00),
 
-    -- Goblin Thief (ID 2) Drops
-    (2, 3, 50.00), -- Goblin Thief -> Assassin's Dagger
-    (2, 10, 50.00), -- Goblin Thief -> Tattered Cloth Garb
-    (2, 17, 10.00), -- Goblin Thief -> Gold Ring of Greed
+    -- Goblin Thief
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Thief'), (SELECT item_template_id FROM item_templates WHERE name = 'Assassin''s Dagger'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Thief'), (SELECT item_template_id FROM item_templates WHERE name = 'Buckler'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Thief'), (SELECT item_template_id FROM item_templates WHERE name = 'Tattered Cloth Garb'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Thief'), (SELECT item_template_id FROM item_templates WHERE name = 'Gold Ring of Greed'), 10.00),
 
-    -- Vampiric Bat (ID 3) Drops
-    (3, 8, 60.00), -- Vampiric Bat -> Ragged Hood
-    (3, 18, 15.00), -- Vampiric Bat -> Vampire's Amulet
+    -- Vampiric Bat
+    ((SELECT enemy_id FROM enemies WHERE name = 'Vampiric Bat'), (SELECT item_template_id FROM item_templates WHERE name = 'Ragged Hood'), 60.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Vampiric Bat'), (SELECT item_template_id FROM item_templates WHERE name = 'Vampire''s Amulet'), 15.00),
 
-    -- Slime Blob (ID 4) Drops
-    (4, 1, 60.00), -- Slime Blob -> Rusty Sword
-    (4, 5, 50.00), -- Slime Blob -> Battered Wooden Shield
+    -- Slime Blob
+    ((SELECT enemy_id FROM enemies WHERE name = 'Slime Blob'), (SELECT item_template_id FROM item_templates WHERE name = 'Rusty Sword'), 60.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Slime Blob'), (SELECT item_template_id FROM item_templates WHERE name = 'Battered Wooden Shield'), 50.00),
 
-    -- Dungeon Rat (ID 5) Drops
-    (5, 8, 50.00), -- Dungeon Rat -> Ragged Hood
-    (5, 10, 50.00), -- Dungeon Rat -> Tattered Cloth Garb
+    -- Dungeon Rat
+    ((SELECT enemy_id FROM enemies WHERE name = 'Dungeon Rat'), (SELECT item_template_id FROM item_templates WHERE name = 'Ragged Hood'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Dungeon Rat'), (SELECT item_template_id FROM item_templates WHERE name = 'Tattered Cloth Garb'), 50.00),
 
-    -- Zombie Wanderer (ID 6) Drops
-    (6, 1, 40.00), -- Zombie Wanderer -> Rusty Sword
-    (6, 13, 40.00), -- Zombie Wanderer -> Leather Greaves
+    -- Zombie Wanderer
+    ((SELECT enemy_id FROM enemies WHERE name = 'Zombie Wanderer'), (SELECT item_template_id FROM item_templates WHERE name = 'Rusty Sword'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Zombie Wanderer'), (SELECT item_template_id FROM item_templates WHERE name = 'Leather Greaves'), 40.00),
 
-    -- Orc Berserker (ID 7) Drops
-    (7, 2, 60.00), -- Orc Berserker -> Slayer's Greatsword
-    (7, 13, 40.00), -- Orc Berserker -> Leather Greaves
+    -- Boneguard Skeleton
+    ((SELECT enemy_id FROM enemies WHERE name = 'Boneguard Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Iron Longsword'), 55.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Boneguard Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Aegis Kite Shield'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Boneguard Skeleton'), (SELECT item_template_id FROM item_templates WHERE name = 'Scout Mask'), 35.00),
 
-    -- Stone Golem (ID 8) Drops
-    (8, 6, 50.00), -- Stone Golem -> Tower Shield
-    (8, 9, 45.00), -- Stone Golem -> Knight's Helm
-    (8, 14, 25.00), -- Stone Golem -> Steelplated Legguards
+    -- Acid Slime
+    ((SELECT enemy_id FROM enemies WHERE name = 'Acid Slime'), (SELECT item_template_id FROM item_templates WHERE name = 'Aegis Kite Shield'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Acid Slime'), (SELECT item_template_id FROM item_templates WHERE name = 'Chainmail Hauberk'), 45.00),
 
-    -- Dark Sorcerer (ID 9) Drops
-    (9, 4, 50.00), -- Dark Sorcerer -> Cursed Bloodpike
-    (9, 12, 40.00), -- Dark Sorcerer -> Shadow Rogue Leather
-    (9, 16, 30.00), -- Dark Sorcerer -> Swift-Step Boots
+    -- Grimjaw Skeleton Captain [Boss]
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grimjaw Skeleton Captain'), (SELECT item_template_id FROM item_templates WHERE name = 'Iron Longsword'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grimjaw Skeleton Captain'), (SELECT item_template_id FROM item_templates WHERE name = 'Aegis Kite Shield'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grimjaw Skeleton Captain'), (SELECT item_template_id FROM item_templates WHERE name = 'Warlord Horned Helm'), 25.00),
 
-    -- Malakor the Desolate Dragon [Boss] (ID 10) Drops
-    (10, 2, 50.00), -- Malakor the Desolate Dragon -> Slayer's Greatsword
-    (10, 11, 40.00), -- Malakor the Desolate Dragon -> Steel Breastplate
-    (10, 14, 40.00), -- Malakor the Desolate Dragon -> Steelplated Legguards
-    (10, 18, 30.00), -- Malakor the Desolate Dragon -> Vampire's Amulet
+    -- ==========================================
+    -- MID GAME MONSTERS
+    -- ==========================================
+    -- Goblin Cutthroat
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Cutthroat'), (SELECT item_template_id FROM item_templates WHERE name = 'Stormglass Rapier'), 55.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Cutthroat'), (SELECT item_template_id FROM item_templates WHERE name = 'Swift-Step Boots'), 30.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Cutthroat'), (SELECT item_template_id FROM item_templates WHERE name = 'Scout Mask'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Goblin Cutthroat'), (SELECT item_template_id FROM item_templates WHERE name = 'Ranger Trousers'), 40.00),
 
-    -- Boneguard Skeleton (ID 11) Drops
-    (11, 19, 55.00), -- Boneguard Skeleton -> Iron Longsword
-    (11, 21, 45.00), -- Boneguard Skeleton -> Aegis Kite Shield
-    (11, 23, 35.00), -- Boneguard Skeleton -> Scout Mask
+    -- Plague Zombie
+    ((SELECT enemy_id FROM enemies WHERE name = 'Plague Zombie'), (SELECT item_template_id FROM item_templates WHERE name = 'Chainmail Hauberk'), 60.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Plague Zombie'), (SELECT item_template_id FROM item_templates WHERE name = 'Charm of Second Wind'), 25.00),
 
-    -- Acid Slime (ID 12) Drops
-    (12, 21, 45.00), -- Acid Slime -> Aegis Kite Shield
-    (12, 25, 45.00), -- Acid Slime -> Chainmail Hauberk
+    -- Cave Bat Matriarch
+    ((SELECT enemy_id FROM enemies WHERE name = 'Cave Bat Matriarch'), (SELECT item_template_id FROM item_templates WHERE name = 'Stormglass Rapier'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Cave Bat Matriarch'), (SELECT item_template_id FROM item_templates WHERE name = 'Pathfinder Boots'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Cave Bat Matriarch'), (SELECT item_template_id FROM item_templates WHERE name = 'Eye of the Deep'), 20.00),
 
-    -- Goblin Cutthroat (ID 13) Drops
-    (13, 20, 55.00), -- Goblin Cutthroat -> Stormglass Rapier
-    (13, 23, 45.00), -- Goblin Cutthroat -> Scout Mask
-    (13, 27, 40.00), -- Goblin Cutthroat -> Ranger Trousers
+    -- Orc Berserker
+    ((SELECT enemy_id FROM enemies WHERE name = 'Orc Berserker'), (SELECT item_template_id FROM item_templates WHERE name = 'Slayer''s Greatsword'), 60.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Orc Berserker'), (SELECT item_template_id FROM item_templates WHERE name = 'Leather Greaves'), 40.00),
 
-    -- Plague Zombie (ID 14) Drops
-    (14, 25, 60.00), -- Plague Zombie -> Chainmail Hauberk
-    (14, 31, 25.00), -- Plague Zombie -> Charm of Second Wind
+    -- Stone Golem
+    ((SELECT enemy_id FROM enemies WHERE name = 'Stone Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Tower Shield'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Stone Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Knight''s Helm'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Stone Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Steelplated Legguards'), 25.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Stone Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Heavy Iron Sabatons'), 35.00),
 
-    -- Cave Bat Matriarch (ID 15) Drops
-    (15, 20, 45.00), -- Cave Bat Matriarch -> Stormglass Rapier
-    (15, 29, 50.00), -- Cave Bat Matriarch -> Pathfinder Boots
-    (15, 32, 20.00), -- Cave Bat Matriarch -> Eye of the Deep
+    -- Dark Sorcerer
+    ((SELECT enemy_id FROM enemies WHERE name = 'Dark Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Cursed Bloodpike'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Dark Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Shadow Rogue Leather'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Dark Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Swift-Step Boots'), 30.00),
 
-    -- Orc Shieldbreaker (ID 16) Drops
-    (16, 24, 45.00), -- Orc Shieldbreaker -> Warlord Horned Helm
-    (16, 26, 35.00), -- Orc Shieldbreaker -> Emberforged Plate
-    (16, 30, 35.00), -- Orc Shieldbreaker -> Thunderstep Sabatons
+    -- Grumthar the Orc Warden [Boss]
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grumthar the Orc Warden'), (SELECT item_template_id FROM item_templates WHERE name = 'Warlord Horned Helm'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grumthar the Orc Warden'), (SELECT item_template_id FROM item_templates WHERE name = 'Emberforged Plate'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Grumthar the Orc Warden'), (SELECT item_template_id FROM item_templates WHERE name = 'Thunderstep Sabatons'), 30.00),
 
-    -- Crystal Golem (ID 17) Drops
-    (17, 22, 40.00), -- Crystal Golem -> Runed Ward Shield
-    (17, 28, 40.00), -- Crystal Golem -> Dragonscale Cuisses
-    (17, 32, 30.00), -- Crystal Golem -> Eye of the Deep
+    -- ==========================================
+    -- LATE GAME MONSTERS
+    -- ==========================================
+    -- Orc Shieldbreaker
+    ((SELECT enemy_id FROM enemies WHERE name = 'Orc Shieldbreaker'), (SELECT item_template_id FROM item_templates WHERE name = 'Warlord Horned Helm'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Orc Shieldbreaker'), (SELECT item_template_id FROM item_templates WHERE name = 'Emberforged Plate'), 35.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Orc Shieldbreaker'), (SELECT item_template_id FROM item_templates WHERE name = 'Thunderstep Sabatons'), 35.00),
 
-    -- Void Sorcerer (ID 18) Drops
-    (18, 20, 35.00), -- Void Sorcerer -> Stormglass Rapier
-    (18, 31, 35.00), -- Void Sorcerer -> Charm of Second Wind
-    (18, 32, 45.00), -- Void Sorcerer -> Eye of the Deep
+    -- Crystal Golem
+    ((SELECT enemy_id FROM enemies WHERE name = 'Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Runed Ward Shield'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Dragonscale Cuisses'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Eye of the Deep'), 30.00),
 
-    -- Grimjaw Skeleton Captain [Boss] (ID 19) Drops
-    (19, 19, 45.00), -- Grimjaw -> Iron Longsword
-    (19, 21, 45.00), -- Grimjaw -> Aegis Kite Shield
-    (19, 24, 25.00), -- Grimjaw -> Warlord Horned Helm
+    -- Void Sorcerer
+    ((SELECT enemy_id FROM enemies WHERE name = 'Void Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Stormglass Rapier'), 35.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Void Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Charm of Second Wind'), 35.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Void Sorcerer'), (SELECT item_template_id FROM item_templates WHERE name = 'Eye of the Deep'), 45.00),
 
-    -- Grumthar the Orc Warden [Boss] (ID 20) Drops
-    (20, 24, 45.00), -- Grumthar -> Warlord Horned Helm
-    (20, 26, 45.00), -- Grumthar -> Emberforged Plate
-    (20, 30, 30.00), -- Grumthar -> Thunderstep Sabatons
+    -- Asterion the Crystal Golem [Boss]
+    ((SELECT enemy_id FROM enemies WHERE name = 'Asterion the Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Runed Ward Shield'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Asterion the Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Dragonscale Cuisses'), 45.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Asterion the Crystal Golem'), (SELECT item_template_id FROM item_templates WHERE name = 'Eye of the Deep'), 35.00),
 
-    -- Asterion the Crystal Golem [Boss] (ID 21) Drops
-    (21, 22, 45.00), -- Asterion -> Runed Ward Shield
-    (21, 28, 45.00), -- Asterion -> Dragonscale Cuisses
-    (21, 32, 35.00); -- Asterion -> Eye of the Deep
+    -- Malakor the Desolate Dragon [Mega Boss]
+    ((SELECT enemy_id FROM enemies WHERE name = 'Malakor the Desolate Dragon'), (SELECT item_template_id FROM item_templates WHERE name = 'Slayer''s Greatsword'), 50.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Malakor the Desolate Dragon'), (SELECT item_template_id FROM item_templates WHERE name = 'Steel Breastplate'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Malakor the Desolate Dragon'), (SELECT item_template_id FROM item_templates WHERE name = 'Steelplated Legguards'), 40.00),
+    ((SELECT enemy_id FROM enemies WHERE name = 'Malakor the Desolate Dragon'), (SELECT item_template_id FROM item_templates WHERE name = 'Vampire''s Amulet'), 30.00);
