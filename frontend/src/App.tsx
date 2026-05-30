@@ -15,6 +15,10 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
+    document.title = "Dungeon Crawler RPG";
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
