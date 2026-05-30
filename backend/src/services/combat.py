@@ -34,6 +34,7 @@ def simulate_autobattle(
     e_def = enemy["base_def"]
     e_spd = enemy["base_spd"]
     e_eva = safe_float(enemy.get("base_eva"), 0.0)
+    e_lifesteal = safe_float(enemy.get("base_lifesteal"), 0.0)
     e_crit_rate = safe_float(enemy.get("base_crit_rate"), 0.0)
     e_crit_dmg = safe_float(enemy.get("base_crit_dmg"), 1.50)
 
@@ -84,7 +85,7 @@ def simulate_autobattle(
                 if p_lifesteal > 0:
                     healed = round(damage * p_lifesteal)
                     p_hp = min(p_max_hp, p_hp + healed)
-                    log_str += f" ❤️ Life-stole +{healed} HP."
+                    log_str += f" ❤️ Life-stole +{healed} HP. ({p_hp}/{p_max_hp} HP)"
 
                 combat_log.append(log_str)
 
@@ -125,14 +126,18 @@ def simulate_autobattle(
 
                 p_hp -= damage
 
+                log_str = ""
                 if is_guard_proc:
-                    combat_log.append(
-                        f"🛡️ [Guard] Triggered! You absorb the blow, taking only {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
-                    )
+                    log_str = f"🛡️ [Guard] Triggered! You absorb the blow, taking only {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
                 else:
-                    combat_log.append(
-                        f"🩸 {enemy['name']} hits you for {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
-                    )
+                    log_str = f"🩸 {enemy['name']} hits you for {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
+
+                if e_lifesteal > 0:
+                    e_healed = round(damage * e_lifesteal)
+                    e_hp = min(e_max_hp, e_hp + e_healed)
+                    log_str += f" 🧛 Stealed +{e_healed} HP. ({e_hp}/{e_max_hp} HP)"
+
+                combat_log.append(log_str)
 
     victory = p_hp > 0
     return {

@@ -59,6 +59,7 @@ function Game({ onLogout }: GameProps) {
   const [activeRun, setActiveRun] = useState<GameRun | null>(null);
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const [logs, setLogs] = useState<string[]>(STARTING_LOGS);
+  const [showEventPanel, setShowEventPanel] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isInShop, setIsInShop] = useState(false);
   const [isInInventory, setIsInInventory] = useState(false);
@@ -122,18 +123,26 @@ function Game({ onLogout }: GameProps) {
       const nextLine = combatResult.combat_log[currentSimIndex];
       setSimulatedLog(previousLog => [...previousLog, nextLine]);
 
-      const hpMatch = nextLine.match(/\((\d+)\/\d+\s+HP\)/);
-      if (hpMatch) {
-        const remainingHp = parseInt(hpMatch[1], 10);
-        const enemyTookDamage = nextLine.includes(`deals`) || nextLine.includes('⚔️');
-        const playerTookDamage = nextLine.includes('hits you') || nextLine.includes('🩸');
+      // Use matchAll to capture multiple HP brackets in a single line (common with lifesteal)
+      const matches = Array.from(nextLine.matchAll(/\((\d+)\/\d+\s+HP\)/g));
+      let lastMatchEnd = 0;
+      
+      matches.forEach((match) => {
+        const remainingHp = parseInt(match[1], 10);
+        // Only look at the text immediately preceding THIS bracket to avoid keyword contamination
+        const segment = nextLine.substring(lastMatchEnd, match.index);
 
-        if (enemyTookDamage) {
+        if (segment.includes('restores') || segment.includes('recovers') || segment.includes('Life-stole') || segment.includes('❤️') || segment.includes('✨') || segment.includes('💚')) {
+          setSimPlayerHp(remainingHp);
+        } else if (segment.includes('steals') || segment.includes('Stealed') || segment.includes('drains') || segment.includes('🧛') || segment.includes('🦇')) {
           setSimEnemyHp(remainingHp);
-        } else if (playerTookDamage) {
+        } else if (segment.includes('deals') || segment.includes('⚔️')) {
+          setSimEnemyHp(remainingHp);
+        } else if (segment.includes('hits you') || segment.includes('🩸')) {
           setSimPlayerHp(remainingHp);
         }
-      }
+        lastMatchEnd = (match.index || 0) + match[0].length;
+      });
 
       setCurrentSimIndex(previousIndex => previousIndex + 1);
     }, 600);
@@ -413,6 +422,7 @@ function Game({ onLogout }: GameProps) {
       }
 
       setCurrentEvent(nextEvent);
+      setShowEventPanel(true);
 
       if (COMBAT_EVENT_TYPES.includes(eventType)) {
         addLog(`Encountered a dangerous foe: ${nextEvent.result.enemy_name || "Unknown Horrific Foe"}!`);
@@ -477,6 +487,27 @@ function Game({ onLogout }: GameProps) {
     }
   };
 
+  const skipNonCombatEvent = async () => {
+    if (!activeRun || !currentEvent) return;
+    setLoading(true);
+
+    try {
+      const response = await api.post<EventCompletionResult>(`/runs/${activeRun.run_id}/complete-event`, {
+        event_template_id: currentEvent.template.event_template_id,
+        event_result_id: currentEvent.result.event_result_id,
+      });
+
+      setActiveRun(response.data.run);
+      applyServerCharacter(response.data.character);
+      addLog(`You chose to bypass the ${currentEvent.template.name} and moved on.`);
+      setCurrentEvent(null);
+    } catch {
+      addLog("Error skipping event.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const advanceAfterCombat = async () => {
     if (combatResult?.run) {
       setActiveRun(combatResult.run);
@@ -523,6 +554,7 @@ function Game({ onLogout }: GameProps) {
     setSimulatedLog([]);
     setCurrentSimIndex(0);
     setCurrentEvent(null);
+    setShowEventPanel(false);
   };
 
   const closeShop = () => {
@@ -632,19 +664,31 @@ function Game({ onLogout }: GameProps) {
       );
     }
 
-    if (currentEvent && isCombatEvent(currentEvent)) {
-      return <ThreatPanel event={currentEvent} loading={loading} onStartCombat={startCombat} />;
-    }
-
-    if (currentEvent) {
-      return <NonCombatEventPanel event={currentEvent} loading={loading} onResolveEvent={resolveEvent} />;
+    if (showEventPanel && currentEvent) {
+      if (isCombatEvent(currentEvent)) {
+        return <ThreatPanel event={currentEvent} loading={loading} onStartCombat={startCombat} onBack={() => setShowEventPanel(false)} />;
+      } else {
+        return (
+          <NonCombatEventPanel
+            event={currentEvent}
+            loading={loading}
+            onResolveEvent={resolveEvent}
+            onSkipEvent={skipNonCombatEvent}
+            onBack={() => {
+              addLog(`Postponed encounter: ${currentEvent.template.name}.`);
+              setShowEventPanel(false);
+            }} />
+        );
+      }
     }
 
     return (
       <ActionNavigation
         loading={loading}
         bossUnlocked={activeRun?.boss_unlocked}
+        hasPendingEvent={!!currentEvent}
         onExplore={exploreNextRoom}
+        onResumeEvent={() => setShowEventPanel(true)}
         onOpenInventory={openInventory}
         onOpenShop={openShop}
       />
