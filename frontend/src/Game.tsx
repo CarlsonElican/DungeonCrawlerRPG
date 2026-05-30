@@ -179,6 +179,8 @@ function Game({ onLogout }: GameProps) {
 
   const selectCharacter = async (character: Character) => {
     setLoading(true);
+    resetEncounterState();
+    setActiveRun(null);  
 
     try {
       const freshCharacter = await fetchCharacterById(character.character_id);
@@ -562,7 +564,11 @@ function Game({ onLogout }: GameProps) {
           character={selectedChar}
           combatResult={combatResult}
           simulatedPlayerHp={simPlayerHp}
-          onBackToSelection={() => setSelectedChar(null)}
+          onBackToSelection={() => {
+            setSelectedChar(null);
+            setActiveRun(null);
+            resetEncounterState();
+          }}
         />
 
         <div className="interactive-screen-panel">
