@@ -126,7 +126,7 @@ function Game({ onLogout }: GameProps) {
       // Use matchAll to capture multiple HP brackets in a single line (common with lifesteal)
       const matches = Array.from(nextLine.matchAll(/\((\d+)\/\d+\s+HP\)/g));
       let lastMatchEnd = 0;
-      
+
       matches.forEach((match) => {
         const remainingHp = parseInt(match[1], 10);
         // Only look at the text immediately preceding THIS bracket to avoid keyword contamination
@@ -615,7 +615,12 @@ function Game({ onLogout }: GameProps) {
         </div>
 
         <div className="game-log-panel">
-          <TerminalLog logs={logs} logRef={terminalLogRef} />
+          <TerminalLog
+            logs={logs.map(logLine => {
+              return logLine.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+            })}
+            logRef={terminalLogRef}
+          />
         </div>
       </div>
       {levelUpModalData && (

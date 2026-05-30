@@ -7,7 +7,7 @@ from src.services.characters import fetch_character_sheet
 from src.services.combat import simulate_autobattle
 from src.services.events import fetch_enemy_for_event
 from src.services.items import insert_inventory_item
-from src.services.loot import calculate_monster_drop
+from src.services.loot import calculate_monster_drop_multiple
 from src.services.progression import (
     advance_floor_after_boss,
     advance_room_or_unlock_boss,
@@ -103,26 +103,28 @@ def resolve_combat(
                 gold_earned = enemy["base_golddrop"]
                 exp_earned = enemy["base_expdrop"]
 
-                drop_roll = calculate_monster_drop(
+                dropped_items = calculate_monster_drop_multiple(
                     cur, enemy["enemy_id"], enemy["type"]
                 )
-                if drop_roll:
+
+                for drop in dropped_items:
                     insert_inventory_item(
                         cur=cur,
                         character_id=character_id,
-                        item_template_id=drop_roll["item_template_id"],
-                        rarity_id=drop_roll["rarity_id"],
+                        item_template_id=drop["item_template_id"],
+                        rarity_id=drop["rarity_id"],
                         item_level=enemy["level"],
                         item_effect="Snatched from a fallen foe",
                     )
 
                     cur.execute(
                         "SELECT name FROM item_templates WHERE item_template_id = %s",
-                        (drop_roll["item_template_id"],),
+                        (drop["item_template_id"],),
                     )
                     item_data = cur.fetchone()
+
                     battle_results["log"].append(
-                        f"🎁 Drop Triggered! You salvaged: {item_data['name']} from the corpse."
+                        f"🎁 Drop Triggered! You salvaged: <span style=\"color:{drop['hex_color']}; font-weight:bold;\">[{drop['rarity_name']}] {item_data['name']}</span> from the corpse."
                     )
 
                 current_level = player["level"]
