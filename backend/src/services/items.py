@@ -28,6 +28,13 @@ def insert_inventory_item(
     if not item:
         raise ValueError("Item template or rarity not found")
 
+    level_multiplier = 1.0 + (max(item_level, 1) - 1) * 0.10
+
+    scaled_hp = float(item["base_hp"] or 0) * level_multiplier
+    scaled_atk = float(item["base_atk"] or 0) * level_multiplier
+    scaled_def = float(item["base_def"] or 0) * level_multiplier
+    scaled_spd = float(item["base_spd"] or 0) * level_multiplier
+
     cur.execute(
         """
         INSERT INTO inventory_items (
@@ -54,10 +61,10 @@ def insert_inventory_item(
             rarity_id,
             item_level,
             item_effect,
-            item_bonus(item["base_hp"], item["stat_multiplier"]),
-            item_bonus(item["base_atk"], item["stat_multiplier"]),
-            item_bonus(item["base_def"], item["stat_multiplier"]),
-            item_bonus(item["base_spd"], item["stat_multiplier"]),
+            item_bonus(scaled_hp, item["stat_multiplier"]),
+            item_bonus(scaled_atk, item["stat_multiplier"]),
+            item_bonus(scaled_def, item["stat_multiplier"]),
+            item_bonus(scaled_spd, item["stat_multiplier"]),
             item_decimal_bonus(item["base_crit_rate"], item["stat_multiplier"]),
             item_decimal_bonus(item["base_crit_dmg"], item["stat_multiplier"]),
             item_decimal_bonus(item["base_eva"], item["stat_multiplier"]),
@@ -169,9 +176,7 @@ def roll_upgrade_stat(item: Dict[str, Any]) -> Tuple[str, float]:
         ("upgrade_eva", "base_eva", True),
         ("upgrade_lifesteal", "base_lifesteal", True),
     ]
-    positive_stats = [
-        stat for stat in eligible_stats if float(item[stat[1]] or 0) > 0
-    ]
+    positive_stats = [stat for stat in eligible_stats if float(item[stat[1]] or 0) > 0]
     if not positive_stats:
         positive_stats = [("upgrade_hp", "base_hp", False)]
 
