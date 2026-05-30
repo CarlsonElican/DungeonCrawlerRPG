@@ -98,6 +98,8 @@ export function CombatPanel({
 function getCombatLineColor(line: string) {
   if (line.includes('🩸')) return '#f87171';
   if (line.includes('⚔️')) return '#34d399';
+  if (line.includes('✨') || line.includes('💚') || line.includes('❤️')) return '#4ade80';
+  if (line.includes('🧛') || line.includes('🦇') || line.includes('Stealed')) return '#a78bfa';
   if (line.includes('💥')) return '#fbbf24';
   if (line.includes('💀')) return '#ef4444';
   return '#fff';
