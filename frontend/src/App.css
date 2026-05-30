@@ -200,7 +200,7 @@
 
 .auth-card {
   width: 100%;
-  max-width: 440px;
+  max-width: 560px;
   background-color: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -359,6 +359,90 @@
   justify-content: center;
   padding: 24px;
   overflow: auto;
+}
+
+.starter-builder {
+  margin-bottom: 20px;
+  padding: 14px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.starter-builder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.starter-builder-header strong {
+  color: var(--accent);
+}
+
+.starter-stat-list {
+  display: grid;
+  gap: 8px;
+}
+
+.starter-stat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 76px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.starter-stat-label {
+  display: block;
+  color: var(--text-h);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.starter-stat-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 0.74rem;
+}
+
+.starter-stat-controls {
+  display: grid;
+  grid-template-columns: 28px 28px 28px;
+  align-items: center;
+  text-align: center;
+  color: var(--text-h);
+  font-weight: 800;
+}
+
+.starter-stat-controls button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--social-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.starter-stat-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.starter-stat-value {
+  color: var(--accent);
+  text-align: right;
+  font-size: 0.9rem;
 }
 
 .game-main-grid {
@@ -904,6 +988,11 @@
   font-weight: 900;
 }
 
+.inventory-upgrade-stat {
+  color: #fbbf24;
+  font-weight: 900;
+}
+
 .shop-item-modal-footer {
   display: flex;
   align-items: center;
@@ -1039,6 +1128,21 @@
   min-width: 84px;
   margin-bottom: 0;
   padding: 10px 16px;
+}
+
+.inventory-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-upgrade-btn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 @media (max-width: 1024px) {

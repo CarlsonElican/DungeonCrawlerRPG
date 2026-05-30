@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import LoginRegister from './LoginRegister';
 import Game from './Game';
+import { api } from './api';
 
 interface User {
   user_id: number;
@@ -13,11 +14,24 @@ interface User {
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    api.get<User>('/users/me')
+      .then(response => setCurrentUser(response.data))
+      .catch(() => {
+        localStorage.removeItem('token');
+        setCurrentUser(null);
+      });
+  }, []);
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     setCurrentUser(null);
   };
 
@@ -25,7 +39,7 @@ function App() {
     <>
       <section id="center">
         {currentUser ? (
-          <Game currentUser={currentUser} onLogout={handleLogout} />
+          <Game onLogout={handleLogout} />
         ) : (
           <LoginRegister onLoginSuccess={handleLoginSuccess} />
         )}

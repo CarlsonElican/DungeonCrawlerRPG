@@ -17,7 +17,7 @@ class CharacterBase(BaseModel):
 
 
 class CharacterCreate(CharacterBase):
-    user_id: int
+    pass
 
 
 class CharacterResponse(CharacterBase):
@@ -93,6 +93,14 @@ class InventoryItemResponse(BaseModel):
     bonus_item_crit_dmg: float
     bonus_item_eva: float
     bonus_item_lifesteal: float
+    upgrade_item_hp: int
+    upgrade_item_atk: int
+    upgrade_item_def: int
+    upgrade_item_spd: int
+    upgrade_item_crit_rate: float
+    upgrade_item_crit_dmg: float
+    upgrade_item_eva: float
+    upgrade_item_lifesteal: float
     total_item_hp: int
     total_item_atk: int
     total_item_def: int
@@ -101,6 +109,7 @@ class InventoryItemResponse(BaseModel):
     total_item_crit_dmg: float
     total_item_eva: float
     total_item_lifesteal: float
+    upgrade_cost: Optional[int]
 
 
 class EquipItemRequest(BaseModel):
@@ -160,6 +169,8 @@ class UpgradeItemResponse(BaseModel):
     inventory_item_id: int
     upgraded_level: int
     gold_spent: int
+    upgraded_stat: str
+    stat_increase: float
     character: CharacterResponse
 
 
