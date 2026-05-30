@@ -180,7 +180,7 @@ function Game({ onLogout }: GameProps) {
   const selectCharacter = async (character: Character) => {
     setLoading(true);
     resetEncounterState();
-    setActiveRun(null);  
+    setActiveRun(null);
 
     try {
       const freshCharacter = await fetchCharacterById(character.character_id);
@@ -565,6 +565,10 @@ function Game({ onLogout }: GameProps) {
           combatResult={combatResult}
           simulatedPlayerHp={simPlayerHp}
           onBackToSelection={() => {
+            setIsInShop(false);
+            setIsInInventory(false);
+            setShopOffers([]);
+            setInventoryItems([]);
             setSelectedChar(null);
             setActiveRun(null);
             resetEncounterState();
@@ -593,12 +597,13 @@ function Game({ onLogout }: GameProps) {
 
   function renderActivePanel(character: Character) {
     if (isInShop) {
-      return <ShopPanel offers={shopOffers} onBuyItem={buyItem} onLeaveShop={closeShop} />;
+      return <ShopPanel key={`shop-run-${activeRun?.run_id}`} offers={shopOffers} onBuyItem={buyItem} onLeaveShop={closeShop} />;
     }
 
     if (isInInventory) {
       return (
         <InventoryPanel
+          key={`inv-char-${character.character_id}`}
           items={inventoryItems}
           onCloseInventory={closeInventory}
           onEquipItem={equipItem}
