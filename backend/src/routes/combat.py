@@ -50,7 +50,9 @@ def resolve_combat(
             if not template:
                 raise HTTPException(status_code=404, detail="Event template not found.")
             if template["event_type"].lower() != "combat":
-                raise HTTPException(status_code=400, detail="Event is not a combat event.")
+                raise HTTPException(
+                    status_code=400, detail="Event is not a combat event."
+                )
 
             cur.execute(
                 """
@@ -99,8 +101,23 @@ def resolve_combat(
                 gold_earned = enemy["base_golddrop"]
                 exp_earned = enemy["base_expdrop"]
 
-                new_exp = player["experience"] + exp_earned
-                level_up_triggered = new_exp >= player["exp_cap"]
+                current_level = player["level"]
+                current_exp = player["experience"] + exp_earned
+                current_cap = player["exp_cap"]
+
+                bonus_hp = 0
+                bonus_atk = 0
+                bonus_def = 0
+
+                while current_exp >= current_cap:
+                    level_up_triggered = True
+                    current_level += 1
+                    current_exp -= current_cap
+                    current_cap = round(current_cap * 1.5)
+
+                    bonus_hp += 15
+                    bonus_atk += 3
+                    bonus_def += 2
 
                 cur.execute(
                     """
@@ -108,13 +125,13 @@ def resolve_combat(
                     SET
                         kills = kills + 1,
                         current_gold = current_gold + %s,
-                        current_hp = CASE WHEN %s THEN %s ELSE %s END,
-                        level = CASE WHEN %s THEN level + 1 ELSE level END,
-                        base_hp = CASE WHEN %s THEN base_hp + 15 ELSE base_hp END,
-                        base_atk = CASE WHEN %s THEN base_atk + 3 ELSE base_atk END,
-                        base_def = CASE WHEN %s THEN base_def + 2 ELSE base_def END,
-                        experience = CASE WHEN %s THEN (%s - exp_cap) ELSE %s END,
-                        exp_cap = CASE WHEN %s THEN ROUND(exp_cap * 1.5) ELSE exp_cap END,
+                        current_hp = CASE WHEN %s THEN (base_hp + %s) ELSE %s END,
+                        level = %s,
+                        base_hp = base_hp + %s,
+                        base_atk = base_atk + %s,
+                        base_def = base_def + %s,
+                        experience = %s,
+                        exp_cap = %s,
                         highest_floor_reached = GREATEST(highest_floor_reached, %s),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE character_id = %s;
@@ -122,16 +139,14 @@ def resolve_combat(
                     (
                         gold_earned,
                         level_up_triggered,
-                        player["total_hp"] + 15,
+                        bonus_hp,
                         battle_results["player_final_hp"],
-                        level_up_triggered,
-                        level_up_triggered,
-                        level_up_triggered,
-                        level_up_triggered,
-                        level_up_triggered,
-                        new_exp,
-                        new_exp,
-                        level_up_triggered,
+                        current_level,
+                        bonus_hp,
+                        bonus_atk,
+                        bonus_def,
+                        current_exp,
+                        current_cap,
                         run["current_floor"],
                         character_id,
                     ),
