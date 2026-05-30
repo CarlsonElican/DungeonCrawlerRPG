@@ -77,8 +77,7 @@ def ensure_inventory_upgrade_columns():
     """Keeps existing local databases compatible with the item upgrade system."""
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 ALTER TABLE inventory_items
                     ADD COLUMN IF NOT EXISTS upgrade_hp INT DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS upgrade_atk INT DEFAULT 0,
@@ -88,8 +87,7 @@ def ensure_inventory_upgrade_columns():
                     ADD COLUMN IF NOT EXISTS upgrade_crit_dmg NUMERIC(5,2) DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS upgrade_eva NUMERIC(5,2) DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS upgrade_lifesteal NUMERIC(5,2) DEFAULT 0;
-                """
-            )
+                """)
 
 
 @app.get("/api/game-status")
@@ -164,7 +162,7 @@ def get_my_characters(current_user: dict = Depends(get_current_user)):
 def create_character(
     char_data: CharacterCreate, current_user: dict = Depends(get_current_user)
 ):
-    """Creates a new character and initializes their base stats"""
+    """Creates a new character and initializes their base stats and starter skill"""
     validate_starting_character(char_data)
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -174,7 +172,7 @@ def create_character(
                                         base_eva, base_crit_rate, base_crit_dmg, base_lifesteal, starter_skill)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *;
-            """,
+                """,
                 (
                     current_user["user_id"],
                     char_data.name,
@@ -190,8 +188,16 @@ def create_character(
                     char_data.starter_skill,
                 ),
             )
-
             new_char = cur.fetchone()
+
+            cur.execute(
+                """
+                INSERT INTO character_skills (character_id, skill_template_id)
+                VALUES (%s, (SELECT skill_template_id FROM skill_templates WHERE name = %s));
+                """,
+                (new_char["character_id"], char_data.starter_skill),
+            )
+
             new_char["total_hp"] = new_char["base_hp"]
             new_char["total_atk"] = new_char["base_atk"]
             new_char["total_def"] = new_char["base_def"]
@@ -200,6 +206,7 @@ def create_character(
             new_char["total_crit_rate"] = new_char["base_crit_rate"]
             new_char["total_crit_dmg"] = new_char["base_crit_dmg"]
             new_char["total_lifesteal"] = new_char["base_lifesteal"]
+
             return new_char
 
 
@@ -226,7 +233,9 @@ def validate_starting_character(char_data: CharacterCreate):
         rounded_points = round(raw_points)
 
         if rounded_points < 0 or abs(raw_points - rounded_points) > 0.001:
-            raise HTTPException(status_code=400, detail="Invalid starting stat allocation")
+            raise HTTPException(
+                status_code=400, detail="Invalid starting stat allocation"
+            )
 
         spent_points += rounded_points
 
@@ -239,13 +248,21 @@ def validate_starting_character(char_data: CharacterCreate):
 
 @app.get("/api/characters/{character_id}", response_model=CharacterResponse)
 def get_character_sheet(character_id: int):
-    """Fetches a character's dynamic stats (Base + Equipped Items)"""
+    """Fetches a character's dynamic stats (Base + Equipped Items) and unlocked skills"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT 
                     c.*,
+                    -- 🌟 NEW: Aggregates active skill names into a list string (e.g. "Strike")
+                    COALESCE((
+                        SELECT STRING_AGG(st.name, ', ') 
+                        FROM character_skills cs 
+                        JOIN skill_templates st ON cs.skill_template_id = st.skill_template_id 
+                        WHERE cs.character_id = c.character_id
+                    ), 'None') AS active_skills,
+                    
                     c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
                     c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
                     c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
@@ -259,7 +276,7 @@ def get_character_sheet(character_id: int):
                 LEFT JOIN item_templates it ON ii.item_template_id = it.item_template_id
                 WHERE c.character_id = %s
                 GROUP BY c.character_id;
-            """,
+                """,
                 (character_id,),
             )
             char = cur.fetchone()
@@ -746,10 +763,15 @@ def upgrade_item(
                     request.inventory_item_id,
                 )
             except ValueError as exc:
-                status_code = 400 if str(exc) in {
-                    "Not enough gold",
-                    "Item is already at max upgrade level",
-                } else 404
+                status_code = (
+                    400
+                    if str(exc)
+                    in {
+                        "Not enough gold",
+                        "Item is already at max upgrade level",
+                    }
+                    else 404
+                )
                 raise HTTPException(status_code=status_code, detail=str(exc))
 
             updated_character = fetch_character_sheet(cur, character_id)
@@ -847,3 +869,12 @@ def delete_character(character_id: int, current_user: dict = Depends(get_current
             )
 
             return {"detail": "Hero profile and all dependent records cleanly wiped."}
+
+
+@app.get("/api/skills/templates")
+def get_all_skill_templates():
+    """Returns all available skills so the frontend can display them during character creation"""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT name, description FROM skill_templates;")
+            return cur.fetchall()

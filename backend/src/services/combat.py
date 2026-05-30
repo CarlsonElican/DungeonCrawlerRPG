@@ -1,5 +1,14 @@
 import random
+from decimal import Decimal
 from typing import List, Dict, Any
+
+
+def safe_float(value: Any, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    if isinstance(value, (int, float, Decimal)):
+        return float(value)
+    return default
 
 
 def simulate_autobattle(
@@ -12,17 +21,21 @@ def simulate_autobattle(
     p_atk = player["total_atk"]
     p_def = player["total_def"]
     p_spd = player["total_spd"]
-    p_eva = player["total_eva"]
-    p_crit_rate = player["total_crit_rate"]
-    p_crit_dmg = player["total_crit_dmg"]
-    p_lifesteal = min(player["total_lifesteal"], 0.50)
+    p_eva = safe_float(player.get("total_eva"), 0.0)
+    p_crit_rate = safe_float(player.get("total_crit_rate"), 0.0)
+    p_crit_dmg = safe_float(player.get("total_crit_dmg"), 1.50)
+    p_lifesteal = min(safe_float(player.get("total_lifesteal"), 0.0), 0.50)
+
+    player_skill = player.get("starter_skill", "Strike")
 
     e_hp = enemy["base_hp"]
     e_max_hp = enemy["base_hp"]
     e_atk = enemy["base_atk"]
     e_def = enemy["base_def"]
     e_spd = enemy["base_spd"]
-    e_eva = enemy["base_eva"]
+    e_eva = safe_float(enemy.get("base_eva"), 0.0)
+    e_crit_rate = safe_float(enemy.get("base_crit_rate"), 0.0)
+    e_crit_dmg = safe_float(enemy.get("base_crit_dmg"), 1.50)
 
     player_ap = 0
     enemy_ap = 0
@@ -41,7 +54,6 @@ def simulate_autobattle(
         player_ap += p_spd
         enemy_ap += e_spd
 
-        # --- PLAYER TURN ---
         if player_ap >= 100 and p_hp > 0:
             player_ap -= 100
             turns_limit -= 1
@@ -53,12 +65,21 @@ def simulate_autobattle(
                 raw_damage = p_atk * (1 - min(0.75, mitigation))
                 damage = max(1, round(raw_damage))
 
+                is_strike_proc = False
+                if player_skill == "Strike" and random.random() < 0.30:
+                    damage = round(damage * 1.5)
+                    is_strike_proc = True
+
                 if random.random() < p_crit_rate:
                     damage = round(damage * p_crit_dmg)
-                    combat_log.append(f"💥 CRITICAL HIT!")
+                    combat_log.append(f"💥 {player['name']} landed a CRITICAL HIT!")
 
                 e_hp -= damage
-                log_str = f"⚔️ {player['name']} deals {damage} damage to {enemy['name']}. ({max(0, e_hp)}/{e_max_hp} HP)"
+
+                if is_strike_proc:
+                    log_str = f"⚡ [Strike] Triggered! {player['name']} deals {damage} heavy damage to {enemy['name']}. ({max(0, e_hp)}/{e_max_hp} HP)"
+                else:
+                    log_str = f"⚔️ {player['name']} deals {damage} damage to {enemy['name']}. ({max(0, e_hp)}/{e_max_hp} HP)"
 
                 if p_lifesteal > 0:
                     healed = round(damage * p_lifesteal)
@@ -67,21 +88,51 @@ def simulate_autobattle(
 
                 combat_log.append(log_str)
 
-        # --- ENEMY TURN ---
+                if player_skill == "First Aid" and random.random() < 0.25:
+                    heal_proc = round(p_max_hp * 0.10)
+                    p_hp = min(p_max_hp, p_hp + heal_proc)
+                    combat_log.append(
+                        f"🩹 [First Aid] Triggered! Recouped +{heal_proc} HP. ({p_hp}/{p_max_hp} HP)"
+                    )
+
         if enemy_ap >= 100 and e_hp > 0:
             enemy_ap -= 100
 
-            if random.random() < p_eva:
-                combat_log.append(f"💨 You dodged {enemy['name']}'s attack!")
+            actual_p_eva = p_eva
+            if player_skill == "Quickstep":
+                actual_p_eva += 0.20
+
+            if random.random() < actual_p_eva:
+                if player_skill == "Quickstep":
+                    combat_log.append(
+                        f"💨 [Quickstep] Triggered! You cleanly dodged {enemy['name']}'s assault!"
+                    )
+                else:
+                    combat_log.append(f"💨 You dodged {enemy['name']}'s attack!")
             else:
                 mitigation = p_def * 0.05
                 raw_damage = e_atk * (1 - min(0.75, mitigation))
                 damage = max(1, round(raw_damage))
 
+                if random.random() < e_crit_rate:
+                    damage = round(damage * e_crit_dmg)
+                    combat_log.append(f"💥 {enemy['name']} landed a CRITICAL HIT!")
+
+                is_guard_proc = False
+                if player_skill == "Guard" and random.random() < 0.35:
+                    damage = max(1, round(damage * 0.5))
+                    is_guard_proc = True
+
                 p_hp -= damage
-                combat_log.append(
-                    f"🩸 {enemy['name']} hits you for {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
-                )
+
+                if is_guard_proc:
+                    combat_log.append(
+                        f"🛡️ [Guard] Triggered! You absorb the blow, taking only {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
+                    )
+                else:
+                    combat_log.append(
+                        f"🩸 {enemy['name']} hits you for {damage} damage! ({max(0, p_hp)}/{p_max_hp} HP)"
+                    )
 
     victory = p_hp > 0
     return {

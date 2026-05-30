@@ -230,7 +230,8 @@ function Game({ onLogout }: GameProps) {
       setIsCreating(false);
       setSelectedChar(response.data);
       setNewName("");
-      setStarterSkill("Strike");
+
+      setStarterSkill("");
       setStarterStatAllocation(INITIAL_STARTER_ALLOCATIONS);
     } catch {
       addLog("Failed to create character. Check backend logs.");

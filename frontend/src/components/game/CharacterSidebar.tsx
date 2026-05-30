@@ -1,4 +1,5 @@
-import { ArrowLeft, Coins, Heart, Shield, Sparkle, Sparkles, Swords, Zap, Rabbit, WandSparkles } from 'lucide-react';
+import { ArrowLeft, Coins, Heart, Shield, Sparkle, Sparkles, Swords, Zap, Rabbit, WandSparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import type { Character, CombatResult, GameRun } from '../../types/game';
 
 interface CharacterSidebarProps {
@@ -9,6 +10,13 @@ interface CharacterSidebarProps {
   onBackToSelection: () => void;
 }
 
+const SKILL_DESCRIPTIONS: Record<string, string> = {
+  'Strike': 'An offensive passive granting a 30% chance to deal 1.5x heavy damage on attack.',
+  'Guard': 'A defensive passive granting a 35% chance to cut incoming damage clean in half.',
+  'Quickstep': 'An agility passive that grants a flat +20% bonus to your Evasion stat, making it much easier to dodge.',
+  'First Aid': 'A supportive passive granting a 25% chance to restore 10% of your max HP when attacking.',
+};
+
 export function CharacterSidebar({
   activeRun,
   character,
@@ -16,8 +24,16 @@ export function CharacterSidebar({
   simulatedPlayerHp,
   onBackToSelection,
 }: CharacterSidebarProps) {
+  const [showSkillDetail, setShowSkillDetail] = useState(false);
   const displayedHp = combatResult ? simulatedPlayerHp : character.current_hp;
   const expPercent = Math.min(100, Math.max(0, (character.experience / character.exp_cap) * 100));
+
+  useEffect(() => {
+    setShowSkillDetail(false);
+  }, [character.character_id]);
+
+  const skillName = character.starter_skill || 'None';
+  const skillEffect = SKILL_DESCRIPTIONS[skillName] || 'No specific effect modifications mapped to this selection.';
 
   return (
     <div className="game-sidebar-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -36,6 +52,7 @@ export function CharacterSidebar({
               {displayedHp} / {character.total_hp}
             </span>
           </div>
+
           <div className="sidebar-vital-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="sidebar-vital-label">
@@ -49,17 +66,58 @@ export function CharacterSidebar({
               <div className="combat-hp-fill" style={{ width: `${expPercent}%`, backgroundColor: 'var(--accent)' }} />
             </div>
           </div>
+
           <div className="sidebar-vital-row">
             <span className="sidebar-vital-label"><Coins size={16} color="#fbbf24" fill="#fbbf24" /> Gold Wealth</span>
             <span className="sidebar-vital-value" style={{ color: '#fbbf24' }}>{character.current_gold}</span>
           </div>
-          <div className="sidebar-vital-row">
-            <span className="sidebar-vital-label"><WandSparkles size={16} color="var(--accent)" /> Skill</span>
-            <span className="sidebar-vital-value">{character.starter_skill || 'None'}</span>
+
+          <div className="sidebar-vital-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: showSkillDetail ? '10px' : '0px' }}>
+            <button
+              type="button"
+              onClick={() => skillName !== 'None' && setShowSkillDetail(!showSkillDetail)}
+              disabled={skillName === 'None'}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                font: 'inherit',
+                color: 'inherit',
+                cursor: skillName !== 'None' ? 'pointer' : 'default',
+                textAlign: 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span className="sidebar-vital-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <WandSparkles size={16} color="var(--accent)" /> Skill
+              </span>
+              <span className="sidebar-vital-value" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: skillName !== 'None' ? 'var(--accent)' : undefined }}>
+                {skillName}
+                {skillName !== 'None' && (showSkillDetail ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+              </span>
+            </button>
+
+            {showSkillDetail && (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#1e293b',
+                borderRadius: '6px',
+                borderLeft: '3px solid #3b82f6',
+                fontSize: '0.78rem',
+                color: '#9ca3af',
+                lineHeight: '1.4',
+                animation: 'fadeIn 0.2s ease-in-out'
+              }}>
+                {skillEffect}
+              </div>
+            )}
           </div>
         </div>
 
-        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.8rem', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attributes Matrix</h4>
+        <h4 style={{ margin: '16px 0 12px 0', fontSize: '0.8rem', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attributes Matrix</h4>
         <div className="attribute-matrix-container">
           <div className="attribute-matrix-row">
             <span><Swords size={14} color="#9ca3af" /> Attack Power</span>
