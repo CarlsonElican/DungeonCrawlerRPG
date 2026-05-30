@@ -74,7 +74,6 @@ STARTER_SKILLS = {"Strike", "Guard", "Quickstep", "First Aid"}
 
 @app.on_event("startup")
 def ensure_inventory_upgrade_columns():
-    """Keeps existing local databases compatible with the item upgrade system."""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -92,7 +91,6 @@ def ensure_inventory_upgrade_columns():
 
 @app.get("/api/game-status")
 def get_game_status():
-    """Verifies connection and pulls the complete list of active RPG tables"""
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -132,21 +130,20 @@ def get_game_status():
 
 @app.get("/api/characters/me", response_model=List[CharacterResponse])
 def get_my_characters(current_user: dict = Depends(get_current_user)):
-    """Fetches all characters owned by a user"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT 
                     c.*,
-                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
-                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
-                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
-                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
-                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0) AS total_eva,
-                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0) AS total_crit_rate,
-                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0) AS total_crit_dmg,
-                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0) AS total_lifesteal
+                    c.base_hp + COALESCE(SUM(ROUND(it.base_hp * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_hp + ii.upgrade_hp), 0)::INTEGER AS total_hp,
+                    c.base_atk + COALESCE(SUM(ROUND(it.base_atk * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_atk + ii.upgrade_atk), 0)::INTEGER AS total_atk,
+                    c.base_def + COALESCE(SUM(ROUND(it.base_def * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_def + ii.upgrade_def), 0)::INTEGER AS total_def,
+                    c.base_spd + COALESCE(SUM(ROUND(it.base_spd * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_spd + ii.upgrade_spd), 0)::INTEGER AS total_spd,
+                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0)::FLOAT AS total_eva,
+                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0)::FLOAT AS total_crit_rate,
+                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0)::FLOAT AS total_crit_dmg,
+                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0)::FLOAT AS total_lifesteal
                 FROM characters c
                 LEFT JOIN inventory_items ii ON c.character_id = ii.character_id AND ii.is_equipped = TRUE
                 LEFT JOIN item_templates it ON ii.item_template_id = it.item_template_id
@@ -162,7 +159,6 @@ def get_my_characters(current_user: dict = Depends(get_current_user)):
 def create_character(
     char_data: CharacterCreate, current_user: dict = Depends(get_current_user)
 ):
-    """Creates a new character and initializes their base stats and starter skill"""
     validate_starting_character(char_data)
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -248,14 +244,12 @@ def validate_starting_character(char_data: CharacterCreate):
 
 @app.get("/api/characters/{character_id}", response_model=CharacterResponse)
 def get_character_sheet(character_id: int):
-    """Fetches a character's dynamic stats (Base + Equipped Items) and unlocked skills"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT 
                     c.*,
-                    -- 🌟 NEW: Aggregates active skill names into a list string (e.g. "Strike")
                     COALESCE((
                         SELECT STRING_AGG(st.name, ', ') 
                         FROM character_skills cs 
@@ -263,14 +257,14 @@ def get_character_sheet(character_id: int):
                         WHERE cs.character_id = c.character_id
                     ), 'None') AS active_skills,
                     
-                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
-                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
-                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
-                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
-                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0) AS total_eva,
-                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0) AS total_crit_rate,
-                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0) AS total_crit_dmg,
-                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0) AS total_lifesteal
+                    c.base_hp + COALESCE(SUM(ROUND(it.base_hp * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_hp + ii.upgrade_hp), 0)::INTEGER AS total_hp,
+                    c.base_atk + COALESCE(SUM(ROUND(it.base_atk * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_atk + ii.upgrade_atk), 0)::INTEGER AS total_atk,
+                    c.base_def + COALESCE(SUM(ROUND(it.base_def * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_def + ii.upgrade_def), 0)::INTEGER AS total_def,
+                    c.base_spd + COALESCE(SUM(ROUND(it.base_spd * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_spd + ii.upgrade_spd), 0)::INTEGER AS total_spd,
+                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0)::FLOAT AS total_eva,
+                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0)::FLOAT AS total_crit_rate,
+                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0)::FLOAT AS total_crit_dmg,
+                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0)::FLOAT AS total_lifesteal
                 FROM characters c
                 LEFT JOIN inventory_items ii ON c.character_id = ii.character_id AND ii.is_equipped = TRUE
                 LEFT JOIN item_templates it ON ii.item_template_id = it.item_template_id
@@ -287,7 +281,6 @@ def get_character_sheet(character_id: int):
 
 @app.post("/api/runs/start/{character_id}", response_model=GameRunResponse)
 def start_run(character_id: int):
-    """Initializes a new dungeon run session"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -308,7 +301,6 @@ def start_run(character_id: int):
 
 @app.get("/api/runs/active/{character_id}", response_model=GameRunResponse)
 def get_active_run(character_id: int):
-    """Retrieves the current ongoing run for a character"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -331,7 +323,6 @@ def complete_event(
     request: EventCompletionRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Records non-combat event completion and advances run progress."""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -561,10 +552,10 @@ def get_character_inventory(
                     ii.upgrade_crit_dmg::FLOAT AS upgrade_item_crit_dmg,
                     ii.upgrade_eva::FLOAT AS upgrade_item_eva,
                     ii.upgrade_lifesteal::FLOAT AS upgrade_item_lifesteal,
-                    (it.base_hp + ii.random_hp + ii.upgrade_hp) AS total_item_hp,
-                    (it.base_atk + ii.random_atk + ii.upgrade_atk) AS total_item_atk,
-                    (it.base_def + ii.random_def + ii.upgrade_def) AS total_item_def,
-                    (it.base_spd + ii.random_spd + ii.upgrade_spd) AS total_item_spd,
+                    (ROUND(it.base_hp * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_hp + ii.upgrade_hp)::INTEGER AS total_item_hp,
+                    (ROUND(it.base_atk * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_atk + ii.upgrade_atk)::INTEGER AS total_item_atk,
+                    (ROUND(it.base_def * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_def + ii.upgrade_def)::INTEGER AS total_item_def,
+                    (ROUND(it.base_spd * (1.0 + (GREATEST(ii.item_level, 1) - 1) * 0.10)) + ii.random_spd + ii.upgrade_spd)::INTEGER AS total_item_spd,
                     (it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate)::FLOAT AS total_item_crit_rate,
                     (it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg)::FLOAT AS total_item_crit_dmg,
                     (it.base_eva + ii.random_eva + ii.upgrade_eva)::FLOAT AS total_item_eva,
@@ -847,10 +838,6 @@ def buy_shop_item(
 
 @app.delete("/api/characters/{character_id}", status_code=status.HTTP_200_OK)
 def delete_character(character_id: int, current_user: dict = Depends(get_current_user)):
-    """
-    Permanently purges a character profile.
-    PostgreSQL schema constraints cascade deletions to game_runs, inventory, and equipment.
-    """
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -873,7 +860,6 @@ def delete_character(character_id: int, current_user: dict = Depends(get_current
 
 @app.get("/api/skills/templates")
 def get_all_skill_templates():
-    """Returns all available skills so the frontend can display them during character creation"""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT name, description FROM skill_templates;")

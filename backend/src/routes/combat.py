@@ -60,10 +60,10 @@ def resolve_combat(
                 """
                 SELECT
                     c.*,
-                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
-                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
-                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
-                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
+                    c.base_hp + COALESCE(SUM(ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
+                    c.base_atk + COALESCE(SUM(ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
+                    c.base_def + COALESCE(SUM(ii.random_def + ii.upgrade_def), 0) AS total_def,
+                    c.base_spd + COALESCE(SUM(ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
                     c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0) AS total_eva,
                     c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0) AS total_crit_rate,
                     c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0) AS total_crit_dmg,

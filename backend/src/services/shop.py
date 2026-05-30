@@ -17,6 +17,7 @@ def _offer_select_sql(where_clause: str) -> str:
             r.hex_color,
             rso.price AS dynamic_gold_cost,
             NULL::TEXT AS item_effect,
+            
             it.base_hp AS base_item_hp,
             it.base_atk AS base_item_atk,
             it.base_def AS base_item_def,
@@ -25,18 +26,20 @@ def _offer_select_sql(where_clause: str) -> str:
             it.base_crit_dmg::FLOAT AS base_item_crit_dmg,
             it.base_eva::FLOAT AS base_item_eva,
             it.base_lifesteal::FLOAT AS base_item_lifesteal,
-            ROUND(it.base_hp * (r.stat_multiplier - 1))::INTEGER AS bonus_item_hp,
-            ROUND(it.base_atk * (r.stat_multiplier - 1))::INTEGER AS bonus_item_atk,
-            ROUND(it.base_def * (r.stat_multiplier - 1))::INTEGER AS bonus_item_def,
-            ROUND(it.base_spd * (r.stat_multiplier - 1))::INTEGER AS bonus_item_spd,
+            
+            ROUND((it.base_hp * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * (r.stat_multiplier - 1))::INTEGER AS bonus_item_hp,
+            ROUND((it.base_atk * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * (r.stat_multiplier - 1))::INTEGER AS bonus_item_atk,
+            ROUND((it.base_def * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * (r.stat_multiplier - 1))::INTEGER AS bonus_item_def,
+            ROUND((it.base_spd * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * (r.stat_multiplier - 1))::INTEGER AS bonus_item_spd,
             ROUND(it.base_crit_rate * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_rate,
             ROUND(it.base_crit_dmg * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_crit_dmg,
             ROUND(it.base_eva * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_eva,
             ROUND(it.base_lifesteal * (r.stat_multiplier - 1), 2)::FLOAT AS bonus_item_lifesteal,
-            ROUND(it.base_hp * r.stat_multiplier)::INTEGER AS total_item_hp,
-            ROUND(it.base_atk * r.stat_multiplier)::INTEGER AS total_item_atk,
-            ROUND(it.base_def * r.stat_multiplier)::INTEGER AS total_item_def,
-            ROUND(it.base_spd * r.stat_multiplier)::INTEGER AS total_item_spd,
+            
+            ROUND((it.base_hp * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * r.stat_multiplier)::INTEGER AS total_item_hp,
+            ROUND((it.base_atk * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * r.stat_multiplier)::INTEGER AS total_item_atk,
+            ROUND((it.base_def * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * r.stat_multiplier)::INTEGER AS total_item_def,
+            ROUND((it.base_spd * (1.0 + (GREATEST(rso.floor_number, 1) - 1) * 0.10)) * r.stat_multiplier)::INTEGER AS total_item_spd,
             ROUND(it.base_crit_rate * r.stat_multiplier, 2)::FLOAT AS total_item_crit_rate,
             ROUND(it.base_crit_dmg * r.stat_multiplier, 2)::FLOAT AS total_item_crit_dmg,
             ROUND(it.base_eva * r.stat_multiplier, 2)::FLOAT AS total_item_eva,
@@ -49,37 +52,39 @@ def _offer_select_sql(where_clause: str) -> str:
     """
 
 
-def get_or_create_shop_offers(cur, run: Dict[str, Any], offer_count: int = 4) -> List[Dict[str, Any]]:
+def get_or_create_shop_offers(
+    cur, run: Dict[str, Any], offer_count: int = 4
+) -> List[Dict[str, Any]]:
     cur.execute(
-        _offer_select_sql(
-            """
+        _offer_select_sql("""
             WHERE rso.run_id = %s
               AND rso.floor_number = %s
               AND rso.room_number = %s
               AND rso.purchased_at IS NULL
-            """
-        ),
+            """),
         (run["run_id"], run["current_floor"], run["current_room"]),
     )
     existing_offers = cur.fetchall()
     if existing_offers:
         return existing_offers
 
-    cur.execute("SELECT * FROM item_templates ORDER BY RANDOM() LIMIT %s", (offer_count,))
+    cur.execute(
+        "SELECT * FROM item_templates ORDER BY RANDOM() LIMIT %s", (offer_count,)
+    )
     templates = cur.fetchall()
 
     for template in templates:
-        cur.execute(
-            """
+        cur.execute("""
             SELECT *
             FROM rarity
             ORDER BY (-LN(GREATEST(RANDOM(), 0.000001)) / NULLIF(weight, 0))
             LIMIT 1
-            """
-        )
+            """)
         rarity = cur.fetchone()
         price = shop_price(
-            template["sell_amount"], rarity["sell_price_multiplier"], run["current_floor"]
+            template["sell_amount"],
+            rarity["sell_price_multiplier"],
+            run["current_floor"],
         )
         cur.execute(
             """
@@ -104,14 +109,12 @@ def get_or_create_shop_offers(cur, run: Dict[str, Any], offer_count: int = 4) ->
         )
 
     cur.execute(
-        _offer_select_sql(
-            """
+        _offer_select_sql("""
             WHERE rso.run_id = %s
               AND rso.floor_number = %s
               AND rso.room_number = %s
               AND rso.purchased_at IS NULL
-            """
-        ),
+            """),
         (run["run_id"], run["current_floor"], run["current_room"]),
     )
     return cur.fetchall()
@@ -189,7 +192,7 @@ def purchase_shop_offer(
         character["character_id"],
         offer["item_template_id"],
         offer["rarity_id"],
-        character["level"],
+        run["current_floor"],
         "Purchased from merchant",
     )
 
