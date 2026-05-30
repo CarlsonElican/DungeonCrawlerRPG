@@ -3,7 +3,7 @@ INSERT INTO event_templates (name, event_type, description) VALUES
     ('Abandoned Chest', 'Treasure', 'A locked chest sits in the corner of the room.'),
     ('Healing Fountain', 'Rest', 'A glowing fountain restores some health.'),
     ('Dark Shrine', 'Risk', 'A shrine offers power at a health cost.'),
-    ('Merchant Camp', 'Shop', 'A traveling merchant offers items for sale.'),
+    ('Loot Corpse', 'Treasure', 'A fallen adventurer lies nearby with a coin pouch still intact.'),
     ('Shadowy Ambush', 'Combat', 'Eyes flash in the darkness. An aggressive creature lunges from the shadows!'),
     ('Guarded Passageway', 'Combat', 'A hostile denizen stands watch over a narrow corridor, weapons drawn.'),
     ('Disturbed Nest', 'Combat', 'You step into a forgotten cavern, instantly drawing the ire of a territorial beast.'),
@@ -23,4 +23,6 @@ INSERT INTO event_templates (name, event_type, description) VALUES
     ('Void Study', 'Combat', 'A sorcerer closes a black tome and turns its empty gaze toward you.'),
     ('Captain of Bones', 'Combat', 'A decorated skeleton captain blocks the stairs to the next floor.'),
     ('The Warden Gate', 'Combat', 'Grumthar the Orc Warden waits behind an iron portcullis.'),
-    ('The Crystal Heart', 'Combat', 'Asterion the Crystal Golem awakens around a pulsing mineral core.');
+    ('The Crystal Heart', 'Combat', 'Asterion the Crystal Golem awakens around a pulsing mineral core.'),
+    ('Hidden Treasure Room', 'Treasure', 'A loose stone reveals a hidden chamber glittering with forgotten riches.'),
+    ('Robbed While Sleeping', 'Risk', 'You wake from a brief rest to find your coin pouch cut open.');

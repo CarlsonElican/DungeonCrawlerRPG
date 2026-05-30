@@ -28,9 +28,8 @@ INSERT INTO event_template_results (
     -- Dark Shrine should trade health for reward.
     (4, 4, 1.00, 1, NULL),
 
-    -- Merchant Camp currently has no dedicated Shop result, so this keeps it
-    -- non-harmful until the backend routes it into the persistent shop flow.
-    (5, 2, 1.00, 1, NULL),
+    -- Loot Corpse gives a larger gold reward than a normal chest.
+    (5, 6, 1.00, 1, NULL),
     (15, 1, 1.00, 1, NULL),
     (16, 1, 1.00, 1, NULL),
     (17, 1, 1.00, 2, NULL),
@@ -41,4 +40,8 @@ INSERT INTO event_template_results (
     (22, 1, 1.00, 6, NULL),
     (23, 1, 1.00, 1, 1),
     (24, 1, 1.00, 2, 3),
-    (25, 1, 1.00, 4, 4);
+    (25, 1, 1.00, 4, 4),
+
+    -- Additional non-combat dungeon events.
+    (26, 7, 1.00, 2, NULL),
+    (27, 8, 1.00, 1, NULL);

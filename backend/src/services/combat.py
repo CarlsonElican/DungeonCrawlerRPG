@@ -135,7 +135,7 @@ def simulate_autobattle(
                 if e_lifesteal > 0:
                     e_healed = round(damage * e_lifesteal)
                     e_hp = min(e_max_hp, e_hp + e_healed)
-                    log_str += f" 🧛 Stealed +{e_healed} HP. ({e_hp}/{e_max_hp} HP)"
+                    log_str += f" 🧛 Stole +{e_healed} HP. ({e_hp}/{e_max_hp} HP)"
 
                 combat_log.append(log_str)
 
