@@ -48,6 +48,49 @@ def root():
 
 app.include_router(combat_router, prefix="/api/combat", tags=["Combat"])
 
+STARTER_STAT_POINTS = 25
+STARTER_BASE_STATS = {
+    "base_hp": 50,
+    "base_atk": 10,
+    "base_def": 10,
+    "base_spd": 50,
+    "base_eva": 0.05,
+    "base_crit_rate": 0.05,
+    "base_crit_dmg": 1.50,
+    "base_lifesteal": 0.00,
+}
+STARTER_STAT_GAINS = {
+    "base_hp": 10,
+    "base_atk": 1,
+    "base_def": 1,
+    "base_spd": 10,
+    "base_eva": 0.01,
+    "base_crit_rate": 0.01,
+    "base_crit_dmg": 0.10,
+    "base_lifesteal": 0.01,
+}
+STARTER_SKILLS = {"Strike", "Guard", "Quickstep", "First Aid"}
+
+
+@app.on_event("startup")
+def ensure_inventory_upgrade_columns():
+    """Keeps existing local databases compatible with the item upgrade system."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                ALTER TABLE inventory_items
+                    ADD COLUMN IF NOT EXISTS upgrade_hp INT DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_atk INT DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_def INT DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_spd INT DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_crit_rate NUMERIC(5,2) DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_crit_dmg NUMERIC(5,2) DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_eva NUMERIC(5,2) DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS upgrade_lifesteal NUMERIC(5,2) DEFAULT 0;
+                """
+            )
+
 
 @app.get("/api/game-status")
 def get_game_status():
@@ -98,14 +141,14 @@ def get_my_characters(current_user: dict = Depends(get_current_user)):
                 """
                 SELECT 
                     c.*,
-                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp), 0) AS total_hp,
-                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk), 0) AS total_atk,
-                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def), 0) AS total_def,
-                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd), 0) AS total_spd,
-                    c.base_eva + COALESCE(SUM(it.base_eva), 0) AS total_eva,
-                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate), 0) AS total_crit_rate,
-                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg), 0) AS total_crit_dmg,
-                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal), 0) AS total_lifesteal
+                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
+                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
+                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
+                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
+                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0) AS total_eva,
+                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0) AS total_crit_rate,
+                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0) AS total_crit_dmg,
+                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0) AS total_lifesteal
                 FROM characters c
                 LEFT JOIN inventory_items ii ON c.character_id = ii.character_id AND ii.is_equipped = TRUE
                 LEFT JOIN item_templates it ON ii.item_template_id = it.item_template_id
@@ -122,6 +165,7 @@ def create_character(
     char_data: CharacterCreate, current_user: dict = Depends(get_current_user)
 ):
     """Creates a new character and initializes their base stats"""
+    validate_starting_character(char_data)
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -159,6 +203,40 @@ def create_character(
             return new_char
 
 
+def validate_starting_character(char_data: CharacterCreate):
+    if char_data.starter_skill not in STARTER_SKILLS:
+        raise HTTPException(status_code=400, detail="Invalid starter skill")
+
+    submitted_stats = {
+        "base_hp": char_data.base_hp,
+        "base_atk": char_data.base_atk,
+        "base_def": char_data.base_def,
+        "base_spd": char_data.base_spd,
+        "base_eva": char_data.base_eva,
+        "base_crit_rate": char_data.base_crit_rate,
+        "base_crit_dmg": char_data.base_crit_dmg,
+        "base_lifesteal": char_data.base_lifesteal,
+    }
+    spent_points = 0
+
+    for stat_name, submitted_value in submitted_stats.items():
+        base_value = STARTER_BASE_STATS[stat_name]
+        gain_value = STARTER_STAT_GAINS[stat_name]
+        raw_points = (float(submitted_value) - base_value) / gain_value
+        rounded_points = round(raw_points)
+
+        if rounded_points < 0 or abs(raw_points - rounded_points) > 0.001:
+            raise HTTPException(status_code=400, detail="Invalid starting stat allocation")
+
+        spent_points += rounded_points
+
+    if spent_points != STARTER_STAT_POINTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Starting characters must spend exactly {STARTER_STAT_POINTS} stat points",
+        )
+
+
 @app.get("/api/characters/{character_id}", response_model=CharacterResponse)
 def get_character_sheet(character_id: int):
     """Fetches a character's dynamic stats (Base + Equipped Items)"""
@@ -168,14 +246,14 @@ def get_character_sheet(character_id: int):
                 """
                 SELECT 
                     c.*,
-                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp), 0) AS total_hp,
-                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk), 0) AS total_atk,
-                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def), 0) AS total_def,
-                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd), 0) AS total_spd,
-                    c.base_eva + COALESCE(SUM(it.base_eva), 0) AS total_eva,
-                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate), 0) AS total_crit_rate,
-                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg), 0) AS total_crit_dmg,
-                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal), 0) AS total_lifesteal
+                    c.base_hp + COALESCE(SUM(it.base_hp + ii.random_hp + ii.upgrade_hp), 0) AS total_hp,
+                    c.base_atk + COALESCE(SUM(it.base_atk + ii.random_atk + ii.upgrade_atk), 0) AS total_atk,
+                    c.base_def + COALESCE(SUM(it.base_def + ii.random_def + ii.upgrade_def), 0) AS total_def,
+                    c.base_spd + COALESCE(SUM(it.base_spd + ii.random_spd + ii.upgrade_spd), 0) AS total_spd,
+                    c.base_eva + COALESCE(SUM(it.base_eva + ii.random_eva + ii.upgrade_eva), 0) AS total_eva,
+                    c.base_crit_rate + COALESCE(SUM(it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate), 0) AS total_crit_rate,
+                    c.base_crit_dmg + COALESCE(SUM(it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg), 0) AS total_crit_dmg,
+                    c.base_lifesteal + COALESCE(SUM(it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal), 0) AS total_lifesteal
                 FROM characters c
                 LEFT JOIN inventory_items ii ON c.character_id = ii.character_id AND ii.is_equipped = TRUE
                 LEFT JOIN item_templates it ON ii.item_template_id = it.item_template_id
@@ -458,14 +536,34 @@ def get_character_inventory(
                     ii.random_crit_dmg::FLOAT AS bonus_item_crit_dmg,
                     ii.random_eva::FLOAT AS bonus_item_eva,
                     ii.random_lifesteal::FLOAT AS bonus_item_lifesteal,
-                    (it.base_hp + ii.random_hp) AS total_item_hp,
-                    (it.base_atk + ii.random_atk) AS total_item_atk,
-                    (it.base_def + ii.random_def) AS total_item_def,
-                    (it.base_spd + ii.random_spd) AS total_item_spd,
-                    (it.base_crit_rate + ii.random_crit_rate)::FLOAT AS total_item_crit_rate,
-                    (it.base_crit_dmg + ii.random_crit_dmg)::FLOAT AS total_item_crit_dmg,
-                    (it.base_eva + ii.random_eva)::FLOAT AS total_item_eva,
-                    (it.base_lifesteal + ii.random_lifesteal)::FLOAT AS total_item_lifesteal
+                    ii.upgrade_hp AS upgrade_item_hp,
+                    ii.upgrade_atk AS upgrade_item_atk,
+                    ii.upgrade_def AS upgrade_item_def,
+                    ii.upgrade_spd AS upgrade_item_spd,
+                    ii.upgrade_crit_rate::FLOAT AS upgrade_item_crit_rate,
+                    ii.upgrade_crit_dmg::FLOAT AS upgrade_item_crit_dmg,
+                    ii.upgrade_eva::FLOAT AS upgrade_item_eva,
+                    ii.upgrade_lifesteal::FLOAT AS upgrade_item_lifesteal,
+                    (it.base_hp + ii.random_hp + ii.upgrade_hp) AS total_item_hp,
+                    (it.base_atk + ii.random_atk + ii.upgrade_atk) AS total_item_atk,
+                    (it.base_def + ii.random_def + ii.upgrade_def) AS total_item_def,
+                    (it.base_spd + ii.random_spd + ii.upgrade_spd) AS total_item_spd,
+                    (it.base_crit_rate + ii.random_crit_rate + ii.upgrade_crit_rate)::FLOAT AS total_item_crit_rate,
+                    (it.base_crit_dmg + ii.random_crit_dmg + ii.upgrade_crit_dmg)::FLOAT AS total_item_crit_dmg,
+                    (it.base_eva + ii.random_eva + ii.upgrade_eva)::FLOAT AS total_item_eva,
+                    (it.base_lifesteal + ii.random_lifesteal + ii.upgrade_lifesteal)::FLOAT AS total_item_lifesteal,
+                    CASE
+                        WHEN ii.upgraded_level >= 10 THEN NULL
+                        ELSE GREATEST(
+                            1,
+                            ROUND(
+                                COALESCE(it.sell_amount, 1)
+                                * COALESCE(r.sell_price_multiplier, 1.0)
+                                * 0.25
+                                * POWER(1.5, ii.upgraded_level)
+                            )
+                        )::INTEGER
+                    END AS upgrade_cost
                 FROM inventory_items ii
                 JOIN item_templates it ON ii.item_template_id = it.item_template_id
                 JOIN rarity r ON ii.rarity_id = r.rarity_id

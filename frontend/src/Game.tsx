@@ -10,18 +10,50 @@ import { InventoryPanel } from './components/game/InventoryPanel';
 import { LevelUpModal } from './components/game/LevelUpModal';
 import { ShopPanel } from './components/game/ShopPanel';
 import { TerminalLog } from './components/game/TerminalLog';
-import type { Character, CombatResult, EventCompletionResult, GameEvent, GameRun, InventoryItem, ShopOffer, UpgradeResult, User } from './types/game';
+import type { Character, CombatResult, EventCompletionResult, GameEvent, GameRun, InventoryItem, ShopOffer, StarterStatAllocation, UpgradeResult } from './types/game';
 import './app.css';
 
 interface GameProps {
-  currentUser: User;
   onLogout: () => void;
 }
 
 const STARTING_LOGS = ["Welcome to the Dungeon..."];
 const COMBAT_EVENT_TYPES = ['enemy', 'monster', 'combat'];
+const STARTER_STAT_POINTS = 25;
+const STARTER_BASE_STATS = {
+  hp: 50,
+  atk: 10,
+  def: 10,
+  spd: 50,
+  eva: 0.05,
+  critRate: 0.05,
+  critDmg: 1.5,
+  lifesteal: 0,
+};
 
-function Game({ currentUser, onLogout }: GameProps) {
+const STARTER_STAT_GAINS = {
+  hp: 10,
+  atk: 1,
+  def: 1,
+  spd: 10,
+  eva: 0.01,
+  critRate: 0.01,
+  critDmg: 0.1,
+  lifesteal: 0.01,
+};
+
+const INITIAL_STARTER_ALLOCATIONS: StarterStatAllocation = {
+  hp: 0,
+  atk: 0,
+  def: 0,
+  spd: 0,
+  eva: 0,
+  critRate: 0,
+  critDmg: 0,
+  lifesteal: 0,
+};
+
+function Game({ onLogout }: GameProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [activeRun, setActiveRun] = useState<GameRun | null>(null);
@@ -34,6 +66,8 @@ function Game({ currentUser, onLogout }: GameProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [newName, setNewName] = useState("");
+  const [starterSkill, setStarterSkill] = useState("Strike");
+  const [starterStatAllocation, setStarterStatAllocation] = useState<StarterStatAllocation>(INITIAL_STARTER_ALLOCATIONS);
 
   const [combatResult, setCombatResult] = useState<CombatResult | null>(null);
   const [preCombatCharacter, setPreCombatCharacter] = useState<Character | null>(null);
@@ -172,19 +206,19 @@ function Game({ currentUser, onLogout }: GameProps) {
     if (!newName.trim()) return;
 
     setLoading(true);
+    const startingStats = buildStartingStats(starterStatAllocation);
 
     const characterPayload = {
       name: newName,
-      user_id: currentUser.user_id,
-      base_hp: 100,
-      base_atk: 25,
-      base_def: 7,
-      base_spd: 100,
-      base_eva: 0.05,
-      base_crit_rate: 0.05,
-      base_crit_dmg: 1.50,
-      base_lifesteal: 0.00,
-      starter_skill: "Strike",
+      base_hp: startingStats.hp,
+      base_atk: startingStats.atk,
+      base_def: startingStats.def,
+      base_spd: startingStats.spd,
+      base_eva: startingStats.eva,
+      base_crit_rate: startingStats.critRate,
+      base_crit_dmg: startingStats.critDmg,
+      base_lifesteal: startingStats.lifesteal,
+      starter_skill: starterSkill,
     };
 
     try {
@@ -194,6 +228,8 @@ function Game({ currentUser, onLogout }: GameProps) {
       setIsCreating(false);
       setSelectedChar(response.data);
       setNewName("");
+      setStarterSkill("Strike");
+      setStarterStatAllocation(INITIAL_STARTER_ALLOCATIONS);
     } catch {
       addLog("Failed to create character. Check backend logs.");
     } finally {
@@ -249,7 +285,7 @@ function Game({ currentUser, onLogout }: GameProps) {
   };
 
   const openInventory = useCallback(async () => {
-    if (!selectedChar) return;
+    if (!selectedChar) return [];
     setLoading(true);
 
     try {
@@ -258,8 +294,10 @@ function Game({ currentUser, onLogout }: GameProps) {
       setIsInInventory(true);
       setIsInShop(false);
       addLog("Opening your adventurer knapsack...");
+      return response.data;
     } catch {
       addLog("Failed to look into your backpack right now.");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -334,7 +372,7 @@ function Game({ currentUser, onLogout }: GameProps) {
   };
 
   const upgradeItem = async (item: InventoryItem) => {
-    if (!selectedChar) return;
+    if (!selectedChar) return null;
 
     try {
       const response = await api.post<UpgradeResult>(`/inventory/upgrade/${selectedChar.character_id}`, {
@@ -342,10 +380,12 @@ function Game({ currentUser, onLogout }: GameProps) {
       });
       addLog(`Upgraded ${item.item_name} to +${response.data.upgraded_level} for ${response.data.gold_spent} gold.`);
       applyServerCharacter(response.data.character);
-      await openInventory();
+      const refreshedItems = await openInventory();
+      return refreshedItems.find(refreshedItem => refreshedItem.inventory_item_id === item.inventory_item_id) ?? null;
     } catch (error: unknown) {
       const message = getApiErrorMessage(error) || "Failed to upgrade item.";
       addLog(message);
+      return null;
     }
   };
 
@@ -499,12 +539,17 @@ function Game({ currentUser, onLogout }: GameProps) {
         isCreating={isCreating}
         loading={loading}
         newName={newName}
+        starterSkill={starterSkill}
+        starterStatAllocation={starterStatAllocation}
+        starterStatPoints={STARTER_STAT_POINTS}
         onCreateCharacter={handleCreateCharacter}
         onDeleteCharacter={deleteCharacter}
         onLogout={onLogout}
         onSelectCharacter={selectCharacter}
         onSetCreating={setIsCreating}
         onSetNewName={setNewName}
+        onSetStarterSkill={setStarterSkill}
+        onSetStarterStatAllocation={setStarterStatAllocation}
       />
     );
   }
@@ -593,6 +638,23 @@ function Game({ currentUser, onLogout }: GameProps) {
       />
     );
   }
+}
+
+function buildStartingStats(allocation: StarterStatAllocation) {
+  return {
+    hp: STARTER_BASE_STATS.hp + (allocation.hp * STARTER_STAT_GAINS.hp),
+    atk: STARTER_BASE_STATS.atk + (allocation.atk * STARTER_STAT_GAINS.atk),
+    def: STARTER_BASE_STATS.def + (allocation.def * STARTER_STAT_GAINS.def),
+    spd: STARTER_BASE_STATS.spd + (allocation.spd * STARTER_STAT_GAINS.spd),
+    eva: roundDecimal(STARTER_BASE_STATS.eva + (allocation.eva * STARTER_STAT_GAINS.eva)),
+    critRate: roundDecimal(STARTER_BASE_STATS.critRate + (allocation.critRate * STARTER_STAT_GAINS.critRate)),
+    critDmg: roundDecimal(STARTER_BASE_STATS.critDmg + (allocation.critDmg * STARTER_STAT_GAINS.critDmg)),
+    lifesteal: roundDecimal(STARTER_BASE_STATS.lifesteal + (allocation.lifesteal * STARTER_STAT_GAINS.lifesteal)),
+  };
+}
+
+function roundDecimal(value: number) {
+  return Math.round(value * 100) / 100;
 }
 
 function isCombatEvent(event: GameEvent) {

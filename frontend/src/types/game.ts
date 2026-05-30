@@ -5,9 +5,13 @@ export interface User {
   created_at: string;
 }
 
+export type StarterStatKey = 'hp' | 'atk' | 'def' | 'spd' | 'eva' | 'critRate' | 'critDmg' | 'lifesteal';
+export type StarterStatAllocation = Record<StarterStatKey, number>;
+
 export interface Character {
   character_id: number;
   name: string;
+  starter_skill?: string | null;
   level: number;
   experience: number;
   exp_cap: number;
@@ -98,6 +102,7 @@ export interface ShopOffer {
   total_item_crit_dmg: number;
   total_item_eva: number;
   total_item_lifesteal: number;
+  upgrade_cost: number | null;
 }
 
 export interface InventoryItem {
@@ -128,6 +133,14 @@ export interface InventoryItem {
   bonus_item_crit_dmg: number;
   bonus_item_eva: number;
   bonus_item_lifesteal: number;
+  upgrade_item_hp: number;
+  upgrade_item_atk: number;
+  upgrade_item_def: number;
+  upgrade_item_spd: number;
+  upgrade_item_crit_rate: number;
+  upgrade_item_crit_dmg: number;
+  upgrade_item_eva: number;
+  upgrade_item_lifesteal: number;
   total_item_hp: number;
   total_item_atk: number;
   total_item_def: number;
@@ -136,6 +149,7 @@ export interface InventoryItem {
   total_item_crit_dmg: number;
   total_item_eva: number;
   total_item_lifesteal: number;
+  upgrade_cost: number | null;
 }
 
 export interface EventCompletionResult {
@@ -149,5 +163,7 @@ export interface UpgradeResult {
   inventory_item_id: number;
   upgraded_level: number;
   gold_spent: number;
+  upgraded_stat: string;
+  stat_increase: number;
   character: Character;
 }

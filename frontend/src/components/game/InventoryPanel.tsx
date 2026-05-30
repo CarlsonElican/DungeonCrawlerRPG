@@ -9,7 +9,7 @@ interface InventoryPanelProps {
   onEquipItem: (item: InventoryItem) => void;
   onSellItem: (item: InventoryItem) => void;
   onUnequipItem: (item: InventoryItem) => void;
-  onUpgradeItem: (item: InventoryItem) => void;
+  onUpgradeItem: (item: InventoryItem) => Promise<InventoryItem | null>;
 }
 
 const EQUIPMENT_SLOTS = ['Weapon', 'Shield', 'Helmet', 'Chestplate', 'Leggings', 'Boots', 'Accessory'];
@@ -26,14 +26,14 @@ const ITEM_TYPE_ICONS: Record<string, LucideIcon> = {
 };
 
 const DETAIL_ROWS = [
-  { label: 'HP', totalKey: 'total_item_hp', bonusKey: 'bonus_item_hp', percent: false, multiplier: false },
-  { label: 'ATK', totalKey: 'total_item_atk', bonusKey: 'bonus_item_atk', percent: false, multiplier: false },
-  { label: 'DEF', totalKey: 'total_item_def', bonusKey: 'bonus_item_def', percent: false, multiplier: false },
-  { label: 'SPD', totalKey: 'total_item_spd', bonusKey: 'bonus_item_spd', percent: false, multiplier: false },
-  { label: 'Crit Rate', totalKey: 'total_item_crit_rate', bonusKey: 'bonus_item_crit_rate', percent: true, multiplier: false },
-  { label: 'Crit Damage', totalKey: 'total_item_crit_dmg', bonusKey: 'bonus_item_crit_dmg', percent: false, multiplier: true },
-  { label: 'Evasion', totalKey: 'total_item_eva', bonusKey: 'bonus_item_eva', percent: true, multiplier: false },
-  { label: 'Lifesteal', totalKey: 'total_item_lifesteal', bonusKey: 'bonus_item_lifesteal', percent: true, multiplier: false },
+  { label: 'HP', totalKey: 'total_item_hp', bonusKey: 'bonus_item_hp', upgradeKey: 'upgrade_item_hp', percent: false, multiplier: false },
+  { label: 'ATK', totalKey: 'total_item_atk', bonusKey: 'bonus_item_atk', upgradeKey: 'upgrade_item_atk', percent: false, multiplier: false },
+  { label: 'DEF', totalKey: 'total_item_def', bonusKey: 'bonus_item_def', upgradeKey: 'upgrade_item_def', percent: false, multiplier: false },
+  { label: 'SPD', totalKey: 'total_item_spd', bonusKey: 'bonus_item_spd', upgradeKey: 'upgrade_item_spd', percent: false, multiplier: false },
+  { label: 'Crit Rate', totalKey: 'total_item_crit_rate', bonusKey: 'bonus_item_crit_rate', upgradeKey: 'upgrade_item_crit_rate', percent: true, multiplier: false },
+  { label: 'Crit Damage', totalKey: 'total_item_crit_dmg', bonusKey: 'bonus_item_crit_dmg', upgradeKey: 'upgrade_item_crit_dmg', percent: false, multiplier: true },
+  { label: 'Evasion', totalKey: 'total_item_eva', bonusKey: 'bonus_item_eva', upgradeKey: 'upgrade_item_eva', percent: true, multiplier: false },
+  { label: 'Lifesteal', totalKey: 'total_item_lifesteal', bonusKey: 'bonus_item_lifesteal', upgradeKey: 'upgrade_item_lifesteal', percent: true, multiplier: false },
 ] as const;
 
 export function InventoryPanel({
@@ -153,7 +153,12 @@ export function InventoryPanel({
           onClose={() => setSelectedItem(null)}
           onEquipToggle={handleEquipToggle}
           onSell={handleSell}
-          onUpgrade={() => onUpgradeItem(selectedItem)}
+          onUpgrade={async () => {
+            const upgradedItem = await onUpgradeItem(selectedItem);
+            if (upgradedItem) {
+              setSelectedItem(upgradedItem);
+            }
+          }}
         />
       )}
     </div>
@@ -199,6 +204,11 @@ function InventoryItemModal({ item, onClose, onEquipToggle, onSell, onUpgrade }:
                     {' '}({formatBonusValue(item[row.bonusKey], row.percent, row.multiplier)})
                   </span>
                 )}
+                {item[row.upgradeKey] !== 0 && (
+                  <span className="inventory-upgrade-stat">
+                    {' '}[{formatBonusValue(item[row.upgradeKey], row.percent, row.multiplier)}]
+                  </span>
+                )}
               </strong>
             </div>
           ))}
@@ -213,7 +223,14 @@ function InventoryItemModal({ item, onClose, onEquipToggle, onSell, onUpgrade }:
               {item.is_equipped ? 'Unequip' : 'Equip'}
             </button>
             <button onClick={onSell} className="btn-secondary inventory-danger-btn">Sell</button>
-            <button onClick={onUpgrade} className="btn-panel-close">Upgrade</button>
+            <button onClick={onUpgrade} disabled={item.upgrade_cost === null} className="btn-panel-close inventory-upgrade-btn">
+              Upgrade
+              {item.upgrade_cost === null ? (
+                <span>Maxed</span>
+              ) : (
+                <span><Coins size={14} /> {item.upgrade_cost}</span>
+              )}
+            </button>
           </div>
         </div>
       </div>
