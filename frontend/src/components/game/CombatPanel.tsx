@@ -68,7 +68,13 @@ export function CombatPanel({
 
       <div className="combat-scroll-box" ref={combatLogRef} style={{ overflowY: 'auto' }}>
         {simulatedLog.map((line, index) => (
-          <div key={`${line}-${index}`} style={{ color: getCombatLineColor(line) }}>{line}</div>
+          <div
+            key={`combat-line-${index}`}
+            style={{ color: getCombatLineColor(line) }}
+            dangerouslySetInnerHTML={{
+              __html: line.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+            }}
+          />
         ))}
       </div>
 
@@ -96,6 +102,7 @@ export function CombatPanel({
 }
 
 function getCombatLineColor(line: string) {
+  if (line.includes('🎁')) return undefined; 
   if (line.includes('🩸')) return '#f87171';
   if (line.includes('⚔️')) return '#34d399';
   if (line.includes('✨') || line.includes('💚') || line.includes('❤️')) return '#4ade80';

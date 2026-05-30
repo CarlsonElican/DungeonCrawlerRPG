@@ -1,13 +1,11 @@
 import random
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
-def calculate_monster_drop(
+def calculate_monster_drop_multiple(
     cur, enemy_id: int, enemy_type: str
-) -> Dict[str, Any] | None:
-    drop_chance = 1.00 if enemy_type.lower() == "boss" else 0.40
-    if random.random() > drop_chance:
-        return None
+) -> List[Dict[str, Any]]:
+    dropped_items = []
 
     cur.execute(
         """
@@ -19,19 +17,30 @@ def calculate_monster_drop(
     )
     loot_pool = cur.fetchall()
     if not loot_pool:
-        return None
+        return []
 
-    item_templates = [row["item_template_id"] for row in loot_pool]
-    item_weights = [float(row["weight"]) for row in loot_pool]
-    chosen_template_id = random.choices(item_templates, weights=item_weights, k=1)[0]
-
-    cur.execute("SELECT rarity_id, weight FROM rarity")
+    cur.execute("SELECT rarity_id, rarity_name, hex_color, weight FROM rarity")
     rarity_pool = cur.fetchall()
-    if not rarity_pool:
-        raise ValueError("Rarity pool database records are completely empty.")
 
-    rarity_ids = [row["rarity_id"] for row in rarity_pool]
-    rarity_weights = [float(row["weight"]) for row in rarity_pool]
-    chosen_rarity_id = random.choices(rarity_ids, weights=rarity_weights, k=1)[0]
+    global_drop_modifier = 2.0 if enemy_type.lower() == "boss" else 1.0
 
-    return {"item_template_id": chosen_template_id, "rarity_id": chosen_rarity_id}
+    for row in loot_pool:
+        item_drop_chance = (float(row["weight"]) / 100.0) * global_drop_modifier
+
+        if random.random() <= item_drop_chance:
+            chosen_rarity = random.choices(
+                rarity_pool,
+                weights=[float(r["weight"]) for r in rarity_pool],
+                k=1,
+            )[0]
+
+            dropped_items.append(
+                {
+                    "item_template_id": row["item_template_id"],
+                    "rarity_id": chosen_rarity["rarity_id"],
+                    "rarity_name": chosen_rarity["rarity_name"],
+                    "hex_color": chosen_rarity["hex_color"],
+                }
+            )
+
+    return dropped_items
