@@ -29,6 +29,10 @@ A sql file with all queries used in our application
 Stored procedures, include a file with all stored procedures
 - Our application does not use any stored procedures
 
+# Video Link
+
+https://www.youtube.com/watch?v=UYRVCWKn8UQ
+
 ---
 
 # Frontend
