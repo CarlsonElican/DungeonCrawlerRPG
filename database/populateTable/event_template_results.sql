@@ -43,5 +43,4 @@ INSERT INTO event_template_results (
     (25, 1, 1.00, 4, 4),
 
     -- Additional non-combat dungeon events.
-    (26, 7, 1.00, 2, NULL),
-    (27, 8, 1.00, 1, NULL);
+    (26, 7, 1.00, 2, NULL);

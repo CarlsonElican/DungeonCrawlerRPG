@@ -6,5 +6,4 @@ VALUES
     ('Cursed Reward', 40, -15, 20, 'Accepted a dangerous shrine reward.'),
     ('Failed Trap', -5, -10, 0, 'Triggered a trap and lost some gold.'),
     ('Looted Corpse', 50, 0, 0, 'Searched a fallen adventurer and recovered their spare gold.'),
-    ('Hidden Treasure Room', 200, 0, 0, 'Discovered a hidden treasure room packed with gold.'),
-    ('Robbed While Sleeping', -100, 0, 0, 'Lost gold after being robbed during a short rest.');
+    ('Hidden Treasure Room', 200, 0, 0, 'Discovered a hidden treasure room packed with gold.');

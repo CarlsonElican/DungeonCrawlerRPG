@@ -24,5 +24,4 @@ INSERT INTO event_templates (name, event_type, description) VALUES
     ('Captain of Bones', 'Combat', 'A decorated skeleton captain blocks the stairs to the next floor.'),
     ('The Warden Gate', 'Combat', 'Grumthar the Orc Warden waits behind an iron portcullis.'),
     ('The Crystal Heart', 'Combat', 'Asterion the Crystal Golem awakens around a pulsing mineral core.'),
-    ('Hidden Treasure Room', 'Treasure', 'A loose stone reveals a hidden chamber glittering with forgotten riches.'),
-    ('Robbed While Sleeping', 'Risk', 'You wake from a brief rest to find your coin pouch cut open.');
+    ('Hidden Treasure Room', 'Treasure', 'A loose stone reveals a hidden chamber glittering with forgotten riches.');
