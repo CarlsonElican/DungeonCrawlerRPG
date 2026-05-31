@@ -1,10 +1,57 @@
+import random
 from typing import Any, Dict, Optional
 
 from src.services.scaling import scale_enemy, scale_event_result
 
 
+COMBAT_EVENT_CHANCE = 0.45
+
+
 def _weighted_order_sql(weight_column: str = "weight") -> str:
     return f"(-LN(GREATEST(RANDOM(), 0.000001)) / NULLIF({weight_column}, 0))"
+
+
+def _fetch_random_event_template(cur, floor: int, combat: bool) -> Optional[Dict[str, Any]]:
+    if combat:
+        cur.execute(
+            """
+            SELECT *
+            FROM (
+                SELECT DISTINCT et.*
+                FROM event_templates et
+                JOIN event_template_enemies ete ON ete.event_template_id = et.event_template_id
+                JOIN enemies e ON e.enemy_id = ete.enemy_id
+                JOIN event_template_results etr ON etr.event_template_id = et.event_template_id
+                WHERE LOWER(et.event_type) = 'combat'
+                  AND etr.min_floor <= %s
+                  AND (etr.max_floor IS NULL OR etr.max_floor >= %s)
+                  AND ete.min_floor <= %s
+                  AND (ete.max_floor IS NULL OR ete.max_floor >= %s)
+                  AND COALESCE(LOWER(e.type), '') != 'boss'
+            ) eligible_templates
+            ORDER BY RANDOM()
+            LIMIT 1;
+            """,
+            (floor, floor, floor, floor),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT *
+            FROM (
+                SELECT DISTINCT et.*
+                FROM event_templates et
+                JOIN event_template_results etr ON etr.event_template_id = et.event_template_id
+                WHERE LOWER(et.event_type) != 'combat'
+                  AND etr.min_floor <= %s
+                  AND (etr.max_floor IS NULL OR etr.max_floor >= %s)
+            ) eligible_templates
+            ORDER BY RANDOM()
+            LIMIT 1;
+            """,
+            (floor, floor),
+        )
+    return cur.fetchone()
 
 
 def fetch_enemy_for_event(cur, event_template_id: int, floor: int, room: int) -> Dict[str, Any]:
@@ -46,31 +93,13 @@ def get_next_event(cur, run: Optional[Dict[str, Any]] = None, level: int = 1) ->
             """,
             (floor, floor),
         )
+        template = cur.fetchone()
     else:
-        cur.execute(
-            f"""
-            SELECT et.*
-            FROM event_templates et
-            LEFT JOIN event_template_enemies ete ON ete.event_template_id = et.event_template_id
-            LEFT JOIN enemies e ON e.enemy_id = ete.enemy_id
-            JOIN event_template_results etr ON etr.event_template_id = et.event_template_id
-            WHERE etr.min_floor <= %s
-              AND (etr.max_floor IS NULL OR etr.max_floor >= %s)
-              AND (
-                LOWER(et.event_type) != 'combat'
-                OR (
-                  ete.min_floor <= %s
-                  AND (ete.max_floor IS NULL OR ete.max_floor >= %s)
-                  AND COALESCE(LOWER(e.type), '') != 'boss'
-                )
-              )
-            ORDER BY RANDOM()
-            LIMIT 1;
-            """,
-            (floor, floor, floor, floor),
-        )
+        should_choose_combat = random.random() < COMBAT_EVENT_CHANCE
+        template = _fetch_random_event_template(cur, floor, combat=should_choose_combat)
+        if not template:
+            template = _fetch_random_event_template(cur, floor, combat=not should_choose_combat)
 
-    template = cur.fetchone()
     if not template:
         raise ValueError("No event templates found")
 
